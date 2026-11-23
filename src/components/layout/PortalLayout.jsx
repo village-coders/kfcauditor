@@ -142,13 +142,13 @@ export default function PortalLayout({ children, pageTitle, bgStyle = 'bg-[#f4f7
           <div className="text-slate-600 flex justify-between gap-2">
             <span className="font-medium">Store:</span>
             <span className="text-[#064e2b] font-bold truncate">
-              {currentUser?.currentStore?.shortName || 'Ibadan'}
+              {currentUser?.currentStore?.shortName || '—'}
             </span>
           </div>
           <div className="text-slate-600 flex justify-between gap-2">
             <span className="font-medium">Auditor:</span>
             <span className="text-[#064e2b] font-bold truncate">
-              {currentUser?.username || 'Taoheed'}
+              {currentUser?.username || '—'}
             </span>
           </div>
         </div>
@@ -172,8 +172,8 @@ export default function PortalLayout({ children, pageTitle, bgStyle = 'bg-[#f4f7
                 {pageTitle || 'Halal Food Authority (KFC Auditor)'}
               </h1>
               <p className="text-[11px] text-emerald-200/90 truncate">
-                Franchisee: {currentUser?.currentStore?.franchiseeName || 'Test'} &bull; Store:{' '}
-                {currentUser?.currentStore?.shortName || 'Ibadan'}
+                Franchisee: {currentUser?.currentStore?.franchiseeName || '—'} &bull; Store:{' '}
+                {currentUser?.currentStore?.shortName || '—'}
               </p>
             </div>
           </div>
@@ -209,15 +209,15 @@ export default function PortalLayout({ children, pageTitle, bgStyle = 'bg-[#f4f7
             <div className="flex items-center gap-4">
               <span>
                 <strong className="text-slate-700">Store:</strong>{' '}
-                {currentUser?.currentStore?.shortName || 'Ibadan'}
+                {currentUser?.currentStore?.shortName || '—'}
               </span>
               <span>
                 <strong className="text-slate-700">Auditor:</strong>{' '}
-                {currentUser?.username || 'Taoheed'}
+                {currentUser?.username || '—'}
               </span>
             </div>
             <div className="text-[11px] text-slate-400">
-              HFA KFC Audit Portal &bull; Store ID: {currentUser?.currentStore?.code || '40288'}
+              HFA KFC Audit Portal &bull; Store ID: {currentUser?.currentStore?.code || '—'}
             </div>
           </div>
         </footer>

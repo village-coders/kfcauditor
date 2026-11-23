@@ -3,7 +3,6 @@ import { User, Store, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } fr
 import InputField from '../common/InputField';
 import SelectField from '../common/SelectField';
 import ForgotPasswordModal from './ForgotPasswordModal';
-import AuditorQuickSelect from './AuditorQuickSelect';
 import { getAssignedStores, loginAuditor, getSavedCredentials } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -34,17 +33,13 @@ export default function LoginForm() {
 
   const debounceTimeout = useRef(null);
 
-  // Initialize with saved credentials or default demo
+  // Initialize with saved credentials if Remember Password was checked
   useEffect(() => {
     const saved = getSavedCredentials();
     if (saved?.username) {
       setUsername(saved.username);
       setRememberPassword(true);
       fetchStoresForUser(saved.username, saved.store);
-    } else {
-      // Pre-fill "Taoheed" as depicted in the reference screenshot for instant visual match
-      setUsername('Taoheed');
-      fetchStoresForUser('Taoheed', 'Ibadan');
     }
   }, []);
 
@@ -110,15 +105,6 @@ export default function LoginForm() {
     debounceTimeout.current = setTimeout(() => {
       fetchStoresForUser(val);
     }, 350);
-  };
-
-  // Quick select an auditor from demo chips
-  const handleQuickSelectAuditor = (auditorName) => {
-    setUsername(auditorName);
-    fetchStoresForUser(auditorName);
-    if (errors.username) {
-      setErrors((prev) => ({ ...prev, username: null }));
-    }
   };
 
   // Validate all 3 required fields
@@ -352,12 +338,6 @@ export default function LoginForm() {
             </button>
           </div>
         </form>
-
-        {/* Quick Test Switcher for user testing */}
-        <AuditorQuickSelect
-          currentUsername={username}
-          onSelectAuditor={handleQuickSelectAuditor}
-        />
       </div>
 
       {/* Forgot Password Modal */}

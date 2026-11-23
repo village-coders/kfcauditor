@@ -135,7 +135,7 @@ export default function DashboardScreen() {
               Welcome, {currentUser?.username || 'Auditor'}
             </h2>
             <p className="text-xs sm:text-sm text-emerald-100/90 mt-0.5">
-              Assigned Store: <strong>{currentUser?.currentStore?.shortName || 'Ibadan'}</strong> ({currentUser?.currentStore?.code || '40288'}) &bull; Franchisee: <strong>{currentUser?.currentStore?.franchiseeName || 'Test'}</strong>
+              Assigned Store: <strong>{currentUser?.currentStore?.shortName || '—'}</strong> ({currentUser?.currentStore?.code || '—'}) &bull; Franchisee: <strong>{currentUser?.currentStore?.franchiseeName || '—'}</strong>
             </p>
           </div>
 

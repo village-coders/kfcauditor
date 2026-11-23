@@ -11,7 +11,7 @@ export function MapScreen() {
     selectedAudit?.address ||
     currentUser?.currentStore?.address ||
     currentUser?.currentStore?.name ||
-    'KFC Ibadan, Nigeria';
+    '';
 
   const [locationInput, setLocationInput] = useState(defaultQuery);
   const [mapQuery, setMapQuery] = useState(defaultQuery);

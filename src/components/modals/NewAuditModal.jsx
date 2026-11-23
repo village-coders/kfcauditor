@@ -14,7 +14,7 @@ export default function NewAuditModal() {
 
   useEffect(() => {
     if (showNewAuditModal) {
-      setAddress(currentUser?.currentStore?.address || currentUser?.currentStore?.shortName || 'Ibadan');
+      setAddress(currentUser?.currentStore?.address || currentUser?.currentStore?.shortName || '');
       setStoreRep('');
       setDesignation('');
       setAuditType('...Select Option...');

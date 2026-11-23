@@ -1,12 +1,10 @@
-import { MOCK_AUDITORS } from '../data/mockAuditors';
 import { apiRequest } from './apiClient';
 
 const SESSION_KEY = 'kfc_auditor_session';
 const SAVED_CREDENTIALS_KEY = 'kfc_auditor_remembered';
 
 /**
- * Fetch assigned stores for an auditor by username from the shared hfaKfc-Backend.
- * Falls back to local MOCK_AUDITORS if the backend has no assignments for a demo user or is offline.
+ * Fetch stores assigned to an auditor for today's date from hfaKfc-Backend.
  */
 export async function getAssignedStores(username) {
   if (!username || !username.trim()) {
@@ -14,8 +12,6 @@ export async function getAssignedStores(username) {
   }
 
   const cleanUsername = username.trim();
-  const cleanKey = cleanUsername.toLowerCase();
-  const mockFallback = MOCK_AUDITORS[cleanKey];
 
   try {
     const res = await apiRequest(`/assignments/auditor/${encodeURIComponent(cleanUsername)}`);
@@ -31,11 +27,13 @@ export async function getAssignedStores(username) {
       };
     }
 
-    const todayStr = new Date().toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    }).replace(/ /g, '-');
+    const todayStr = new Date()
+      .toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+      .replace(/ /g, '-');
 
     return {
       success: false,
@@ -43,28 +41,17 @@ export async function getAssignedStores(username) {
       message: `No audit assigned to "${cleanUsername}" for today (${todayStr}).`
     };
   } catch {
-    // Offline fallback
-    if (mockFallback?.assignedStores?.length > 0) {
-      return {
-        success: true,
-        auditorName: mockFallback.fullName,
-        role: mockFallback.role,
-        stores: mockFallback.assignedStores,
-        message: `${mockFallback.assignedStores.length} assigned store(s) loaded (offline mode)`
-      };
-    }
-
     return {
       success: false,
       stores: [],
-      message: `Unable to reach server and no offline assignment found for "${cleanUsername}".`
+      message: 'Unable to reach assignment server.'
     };
   }
 }
 
 /**
- * Authenticate auditor login against hfaKfc-Backend (/api/auth/login).
- * Falls back to offline demo validation only if the backend server is unreachable.
+ * Authenticate auditor login against hfaKfc-Backend (/api/auth/login)
+ * and verify the selected store is assigned for today's date.
  */
 export async function loginAuditor({ username, store, password, rememberPassword }) {
   if (!username?.trim() || !store?.trim() || !password?.trim()) {
@@ -75,8 +62,6 @@ export async function loginAuditor({ username, store, password, rememberPassword
   }
 
   const cleanUsername = username.trim();
-  const cleanKey = cleanUsername.toLowerCase();
-  const mockAuditor = MOCK_AUDITORS[cleanKey];
 
   let backendUser = null;
   try {
@@ -86,36 +71,32 @@ export async function loginAuditor({ username, store, password, rememberPassword
     });
     backendUser = res?.data || null;
   } catch (err) {
-    // If backend explicitly rejected credentials (401/400), return that error
     if (err.status === 401 || err.status === 400) {
       return {
         success: false,
         message: err.message || 'Invalid username or password.'
       };
     }
-    // Otherwise backend is offline — allow demo fallback if password >= 4 chars
-    if (password.length < 4) {
-      return {
-        success: false,
-        message: 'Password must be at least 4 characters long.'
-      };
-    }
+    return {
+      success: false,
+      message: 'Authentication server unreachable.'
+    };
   }
 
-  // Resolve selected store details from today's backend assignment
   let availableStores = [];
-  let backendReachable = false;
   try {
     const storeRes = await apiRequest(`/assignments/auditor/${encodeURIComponent(cleanUsername)}`);
-    backendReachable = true;
     if (Array.isArray(storeRes?.data)) {
       availableStores = storeRes.data;
     }
   } catch {
-    availableStores = mockAuditor?.assignedStores || [];
+    return {
+      success: false,
+      message: 'Unable to verify today’s store assignment.'
+    };
   }
 
-  if (backendReachable && availableStores.length === 0) {
+  if (availableStores.length === 0) {
     return {
       success: false,
       message: `No audit is assigned to "${cleanUsername}" for today. Login is only permitted on the allocated audit date.`
@@ -129,30 +110,22 @@ export async function loginAuditor({ username, store, password, rememberPassword
       s.name?.toLowerCase() === store.toLowerCase()
   );
 
-  if (backendReachable && !selectedStore) {
+  if (!selectedStore) {
     return {
       success: false,
       message: `Store "${store}" is not assigned to "${cleanUsername}" for today.`
     };
   }
 
-  const resolvedStore = selectedStore || {
-    id: 'custom-store',
-    name: store,
-    shortName: store,
-    code: 'KFC-LOC-AUDIT',
-    region: 'Assigned Region'
-  };
-
   const userSession = {
-    id: backendUser?.id || cleanKey,
+    id: backendUser?.id || cleanUsername.toLowerCase(),
     token: backendUser?.token || '',
-    username: backendUser?.username || mockAuditor?.username || cleanUsername,
-    fullName: backendUser?.fullName || mockAuditor?.fullName || cleanUsername,
-    role: backendUser?.role || mockAuditor?.role || 'KFC Store Auditor',
+    username: backendUser?.username || cleanUsername,
+    fullName: backendUser?.fullName || cleanUsername,
+    role: backendUser?.role || 'KFC Store Auditor',
     email: backendUser?.email || '',
-    currentStore: resolvedStore,
-    auditSchedule: resolvedStore?.session || 'General Halal & Hygiene Audit',
+    currentStore: selectedStore,
+    auditSchedule: selectedStore?.session || 'Halal & Hygiene Audit',
     loginTime: new Date().toISOString()
   };
 

@@ -138,62 +138,6 @@ function formatTime(d = new Date()) {
   return d.toTimeString().split(' ')[0];
 }
 
-// const INITIAL_SAMPLE_AUDITS = [
-//   {
-//     appId: '262939',
-//     franchiseeId: '20046',
-//     franchiseeName: 'Test',
-//     storeId: '40288',
-//     storeName: 'Ibadan',
-//     address: 'Ring Road, Ibadan',
-//     storeRep: 'Store Manager',
-//     designation: 'Shift Runner',
-//     auditor: 'Taoheed',
-//     auditType: 'Existing Store',
-//     sessionRound: 'Round Three 2026',
-//     date: '10-Nov-2026',
-//     timeIn: '06:54:50',
-//     timeOut: '',
-//     productsSubmitted: true,
-//     checklistSubmitted: false,
-//     outcomeSubmitted: false,
-//     products: [
-//       { id: 1, name: 'Fries 9x9', supplier: 'Aviko / Farm Frites / Lamb Weston', category: 'Frozen' }
-//     ],
-//     productComment: 'Frozen storage inspected and verified against HFA approved list.',
-//     checklistScores: {
-//       ScoreCommentsA1: 'Pass',
-//       ScoreCommentsA2: 'Pass',
-//       ScoreCommentsA3: 'Pass',
-//       ScoreCommentsA4: 'Pass',
-//       ScoreCommentsB1: 'Pass',
-//       ScoreCommentsB2: 'Pass',
-//       ScoreCommentsB3: 'Pass',
-//       ScoreCommentsC1: 'Pass',
-//       ScoreCommentsC2: 'Pass',
-//       ScoreCommentsD1: 'Pass'
-//     },
-//     checklistComments: {
-//       MsgA1: '',
-//       MsgA2: '',
-//       MsgA3: '',
-//       MsgA4: '',
-//       MsgB1: '',
-//       MsgB2: '',
-//       MsgB3: '',
-//       MsgC1: '',
-//       MsgC2: '',
-//       MsgD1: ''
-//     },
-//     randomChecks: [
-//       { id: 'rc-1', deliveryDate: '08-Nov-2026', checklist: 'Verified', fsms: 'Matched' }
-//     ],
-//     checklistOverallComment: '',
-//     outcomeData: null,
-//     statusCategory: 'PENDING'
-//   }
-// ];
-
 export function AuditPortalProvider({ children }) {
   const { currentUser } = useAuth();
   const toast = useToast();
@@ -201,7 +145,7 @@ export function AuditPortalProvider({ children }) {
     return localStorage.getItem(ACTIVE_SCREEN_KEY) || 'DASHBOARD';
   });
   const [selectedAuditId, setSelectedAuditId] = useState(() => {
-    return localStorage.getItem(SELECTED_AUDIT_KEY) || '262939';
+    return localStorage.getItem(SELECTED_AUDIT_KEY) || null;
   });
   const [protocolAccepted, setProtocolAccepted] = useState(() => {
     return sessionStorage.getItem(PROTOCOL_KEY) === 'true';
@@ -240,7 +184,7 @@ export function AuditPortalProvider({ children }) {
     } catch {
       // ignore
     }
-    return INITIAL_SAMPLE_AUDITS;
+    return [];
   });
 
   useEffect(() => {
@@ -373,14 +317,14 @@ export function AuditPortalProvider({ children }) {
     const newId = String(Math.floor(262940 + Math.random() * 9000));
     const newAudit = {
       appId: newId,
-      franchiseeId: franchiseeId || currentUser?.currentStore?.franchiseeId || '20046',
-      franchiseeName: franchiseeName || currentUser?.currentStore?.franchiseeName || 'Test',
-      storeId: storeId || currentUser?.currentStore?.code || '40288',
-      storeName: storeName || currentUser?.currentStore?.shortName || 'Ibadan',
-      address: address || currentUser?.currentStore?.address || 'Ibadan',
+      franchiseeId: franchiseeId || currentUser?.currentStore?.franchiseeId || '',
+      franchiseeName: franchiseeName || currentUser?.currentStore?.franchiseeName || '',
+      storeId: storeId || currentUser?.currentStore?.code || '',
+      storeName: storeName || currentUser?.currentStore?.shortName || '',
+      address: address || currentUser?.currentStore?.address || '',
       storeRep: storeRep || 'Store Manager',
       designation: designation || 'Shift Runner',
-      auditor: currentUser?.username || 'Taoheed',
+      auditor: currentUser?.username || '',
       auditType: auditType === '...Select Option...' ? 'Existing Store' : auditType,
       sessionRound: 'Round Three 2026',
       date: formatAuditDate(),
