@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus,
   Search,
@@ -34,16 +35,39 @@ export default function AuditListScreen() {
   const { currentUser } = useAuth();
 
   const [dateFilter, setDateFilter] = useState('');
-  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [openMenu, setOpenMenu] = useState(null); // { audit, top, left }
   const [editingAudit, setEditingAudit] = useState(null);
 
   useEffect(() => {
     const closeOnEscape = (e) => {
-      if (e.key === 'Escape') setOpenDropdownId(null);
+      if (e.key === 'Escape') setOpenMenu(null);
     };
+    const closeOnScrollOrResize = () => setOpenMenu(null);
     window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    window.addEventListener('scroll', closeOnScrollOrResize, true);
+    window.addEventListener('resize', closeOnScrollOrResize);
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('scroll', closeOnScrollOrResize, true);
+      window.removeEventListener('resize', closeOnScrollOrResize);
+    };
   }, []);
+
+  const toggleActionMenu = (e, audit) => {
+    e.stopPropagation();
+    if (openMenu?.audit?.appId === audit.appId) {
+      setOpenMenu(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuHeight = 225;
+    const menuWidth = 216;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceBelow < menuHeight && rect.top > menuHeight;
+    const top = openUpward ? Math.max(8, rect.top - menuHeight - 6) : rect.bottom + 6;
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - menuWidth - 8);
+    setOpenMenu({ audit, top, left });
+  };
 
   const matchesDate = (a) => {
     if (!dateFilter.trim()) return true;
@@ -63,7 +87,7 @@ export default function AuditListScreen() {
 
   const handleActionSelect = (auditId, targetScreen) => {
     setSelectedAuditId(auditId);
-    setOpenDropdownId(null);
+    setOpenMenu(null);
     setActiveScreen(targetScreen);
   };
 
@@ -269,72 +293,21 @@ export default function AuditListScreen() {
               }`}
             >
               {/* Action Dropdown Column */}
-              <td className="py-2.5 px-3 relative">
+              <td className="py-2.5 px-3">
                 <button
                   type="button"
-                  onClick={() =>
-                    setOpenDropdownId(openDropdownId === audit.appId ? null : audit.appId)
-                  }
+                  onClick={(e) => toggleActionMenu(e, audit)}
                   className={`px-3 py-1.5 text-white rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer ${
                     isPast ? 'bg-slate-700 hover:bg-slate-800' : 'bg-[#064e2b] hover:bg-[#053e22]'
                   }`}
                 >
                   <span>Actions</span>
-                  <ChevronDown className="w-3.5 h-3.5" />
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform ${
+                      openMenu?.audit?.appId === audit.appId ? 'rotate-180' : ''
+                    }`}
+                  />
                 </button>
-
-                {openDropdownId === audit.appId && (
-                  <div className="absolute left-3 top-11 z-30 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => handleActionSelect(audit.appId, 'PRODUCTS')}
-                      className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 font-medium text-slate-800 flex items-center gap-2 cursor-pointer"
-                    >
-                      <Package className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Add \ View Product(s)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={!audit.productsSubmitted || audit.checklistSubmitted}
-                      onClick={() => handleActionSelect(audit.appId, 'ADD_CHECKLIST')}
-                      className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 font-medium text-slate-800 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
-                    >
-                      <ClipboardList className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Add Check List</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={!audit.productsSubmitted && !audit.checklistSubmitted}
-                      onClick={() => handleActionSelect(audit.appId, 'VIEW_CHECKLIST')}
-                      className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 font-medium text-slate-800 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-sky-600" />
-                      <span>View Check List</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={!audit.checklistSubmitted}
-                      onClick={() => handleActionSelect(audit.appId, 'ADD_OUTCOME')}
-                      className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 font-medium text-slate-800 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
-                    >
-                      <FileSignature className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Add Outcome Sheet</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={!audit.checklistSubmitted}
-                      onClick={() => handleActionSelect(audit.appId, 'VIEW_OUTCOME')}
-                      className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 font-medium text-slate-800 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
-                    >
-                      <FileCheck className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>View Outcome Sheet</span>
-                    </button>
-                  </div>
-                )}
               </td>
 
               {/* Edit Audit Button */}
@@ -554,6 +527,72 @@ export default function AuditListScreen() {
           </>
         )}
       </section>
+
+      {/* Floating Portal Actions Menu — always renders above table containers */}
+      {openMenu &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[90]"
+              onClick={() => setOpenMenu(null)}
+              aria-hidden="true"
+            />
+            <div
+              style={{ top: `${openMenu.top}px`, left: `${openMenu.left}px` }}
+              className="fixed z-[100] w-54 bg-white rounded-xl shadow-2xl border border-slate-200/90 py-1.5 text-xs ring-1 ring-slate-900/5"
+            >
+              <button
+                type="button"
+                onClick={() => handleActionSelect(openMenu.audit.appId, 'PRODUCTS')}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50 font-medium text-slate-800 flex items-center gap-2.5 cursor-pointer transition-colors"
+              >
+                <Package className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                <span>Add \ View Product(s)</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={!openMenu.audit.productsSubmitted || openMenu.audit.checklistSubmitted}
+                onClick={() => handleActionSelect(openMenu.audit.appId, 'ADD_CHECKLIST')}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50 font-medium text-slate-800 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center gap-2.5 cursor-pointer transition-colors"
+              >
+                <ClipboardList className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                <span>Add Check List</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={!openMenu.audit.productsSubmitted && !openMenu.audit.checklistSubmitted}
+                onClick={() => handleActionSelect(openMenu.audit.appId, 'VIEW_CHECKLIST')}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50 font-medium text-slate-800 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center gap-2.5 cursor-pointer transition-colors"
+              >
+                <Eye className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                <span>View Check List</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={!openMenu.audit.checklistSubmitted}
+                onClick={() => handleActionSelect(openMenu.audit.appId, 'ADD_OUTCOME')}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50 font-medium text-slate-800 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center gap-2.5 cursor-pointer transition-colors"
+              >
+                <FileSignature className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                <span>Add Outcome Sheet</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={!openMenu.audit.checklistSubmitted}
+                onClick={() => handleActionSelect(openMenu.audit.appId, 'VIEW_OUTCOME')}
+                className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50 font-medium text-slate-800 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center gap-2.5 cursor-pointer transition-colors"
+              >
+                <FileCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span>View Outcome Sheet</span>
+              </button>
+            </div>
+          </>,
+          document.body
+        )}
 
       {/* Inline Edit Audit Popup */}
       {editingAudit && (
