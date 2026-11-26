@@ -218,7 +218,7 @@ export default function AuditListScreen() {
 
             <button
               type="button"
-              disabled={!audit.checklistSubmitted}
+              disabled={!audit.checklistSubmitted || audit.outcomeSubmitted}
               onClick={() => handleActionSelect(audit.appId, 'ADD_OUTCOME')}
               className="min-h-[44px] px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
@@ -572,7 +572,7 @@ export default function AuditListScreen() {
 
               <button
                 type="button"
-                disabled={!openMenu.audit.checklistSubmitted}
+                disabled={!openMenu.audit.checklistSubmitted || openMenu.audit.outcomeSubmitted}
                 onClick={() => handleActionSelect(openMenu.audit.appId, 'ADD_OUTCOME')}
                 className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50 font-medium text-slate-800 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center gap-2.5 cursor-pointer transition-colors"
               >
