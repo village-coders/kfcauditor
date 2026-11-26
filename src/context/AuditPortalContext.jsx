@@ -51,6 +51,7 @@ function fromBackendAudit(doc) {
   return {
     backendId: idStr,
     appId,
+    assignmentId: String(doc.assignmentId || ''),
     franchiseeId: String(doc.franchiseeId || ''),
     franchiseeName: doc.franchisee || '',
     storeId: String(doc.branchCode || doc.storeId || ''),
@@ -88,6 +89,7 @@ function fromBackendAudit(doc) {
 function toBackendAuditPayload(audit) {
   return {
     appId: audit.appId,
+    assignmentId: audit.assignmentId || '',
     storeId: audit.storeId,
     storeName: audit.storeName,
     branchCode: audit.storeId || '0000',
@@ -125,6 +127,68 @@ const AUDITS_STORAGE_KEY = 'kfc_hfa_portal_audits_v1';
 const ACTIVE_SCREEN_KEY = 'kfc_hfa_active_screen_v1';
 const SELECTED_AUDIT_KEY = 'kfc_hfa_selected_audit_v1';
 const PROTOCOL_KEY = 'kfc_hfa_protocol_accepted';
+
+const MONTHS_LOWER = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+function parseLocalDay(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+
+  const dmyText = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+  if (dmyText) {
+    const m = MONTHS_LOWER.indexOf(dmyText[2].toLowerCase());
+    if (m >= 0) return new Date(Number(dmyText[3]), m, Number(dmyText[1])).getTime();
+  }
+
+  const ymd = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (ymd) {
+    return new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3])).getTime();
+  }
+
+  const dmySlash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmySlash) {
+    return new Date(Number(dmySlash[3]), Number(dmySlash[2]) - 1, Number(dmySlash[1])).getTime();
+  }
+
+  const parsed = new Date(s);
+  if (!Number.isNaN(parsed.getTime())) {
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).getTime();
+  }
+  return null;
+}
+
+function isAuditForCurrentAssignment(audit, currentUser) {
+  if (!audit) return false;
+  const currentStore = currentUser?.currentStore;
+  const activeAssignmentId = String(currentStore?.assignmentId || '').trim();
+
+  // Direct match by assignmentId (audits created in this assignment)
+  if (activeAssignmentId && audit.assignmentId && String(audit.assignmentId) === activeAssignmentId) {
+    return true;
+  }
+
+  // Otherwise match by current auditor + date within the active assignment window [startDate, endDate]
+  const activeUsername = String(currentUser?.username || '').trim().toLowerCase();
+  const auditAuditor = String(audit.auditor || '').trim().toLowerCase();
+  if (activeUsername && auditAuditor && activeUsername !== auditAuditor) {
+    return false;
+  }
+
+  const auditTs = parseLocalDay(audit.date);
+  if (auditTs === null) return false;
+
+  const startTs = parseLocalDay(currentStore?.startDate || currentStore?.date);
+  const endTs = parseLocalDay(currentStore?.endDate || currentStore?.startDate || currentStore?.date);
+
+  if (startTs !== null) {
+    const effectiveEnd = endTs !== null ? endTs : startTs;
+    return auditTs >= startTs && auditTs <= effectiveEnd;
+  }
+
+  // Fallback if assignment dates are absent: only audits created today by this auditor
+  const todayTs = parseLocalDay(formatAuditDate());
+  return auditTs === todayTs;
+}
 
 function formatAuditDate(d = new Date()) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -309,29 +373,43 @@ export function AuditPortalProvider({ children }) {
     [audits, currentUser?.currentStore]
   );
 
-  // An auditor can only add ONE audit for the logged-in store per allocated date / active session
-  const hasAddedAudit = useMemo(() => {
-    const todayStr = formatAuditDate();
-    return storeAudits.some(
-      (a) =>
-        String(a.date || '').toLowerCase() === todayStr.toLowerCase() ||
-        !a.outcomeSubmitted
-    );
-  }, [storeAudits]);
+  // Split audits into Current Assignment (top) vs Past Store Audits (bottom), sorted newest-first
+  const { currentAssignmentAudits, pastAudits } = useMemo(() => {
+    const current = [];
+    const past = [];
+    storeAudits.forEach((a) => {
+      if (isAuditForCurrentAssignment(a, currentUser)) {
+        current.push(a);
+      } else {
+        past.push(a);
+      }
+    });
+    const byDateDesc = (a, b) => (parseLocalDay(b.date) || 0) - (parseLocalDay(a.date) || 0);
+    current.sort(byDateDesc);
+    past.sort(byDateDesc);
+    return { currentAssignmentAudits: current, pastAudits: past };
+  }, [storeAudits, currentUser]);
+
+  // Only disable "New Audit" if the auditor has already created an audit for the current assignment
+  const hasAddedAudit = currentAssignmentAudits.length > 0;
 
   const selectedAudit =
-    storeAudits.find((a) => a.appId === selectedAuditId) || storeAudits[0] || null;
+    storeAudits.find((a) => a.appId === selectedAuditId) ||
+    currentAssignmentAudits[0] ||
+    pastAudits[0] ||
+    null;
 
   // Create New Audit (from Dashboard or Audit List modal)
   const createNewAudit = ({ franchiseeId, franchiseeName, storeId, storeName, address, storeRep, designation, auditType }) => {
     if (hasAddedAudit) {
-      toast.warning('An audit has already been added for this store. You cannot add another one.', 'Audit Already Added');
+      toast.warning('An audit has already been added for this assignment. You cannot add another one.', 'Audit Already Added');
       setShowNewAuditModal(false);
       return null;
     }
     const newId = String(Math.floor(262940 + Math.random() * 9000));
     const newAudit = {
       appId: newId,
+      assignmentId: currentUser?.currentStore?.assignmentId || '',
       franchiseeId: franchiseeId || currentUser?.currentStore?.franchiseeId || '',
       franchiseeName: franchiseeName || currentUser?.currentStore?.franchiseeName || '',
       storeId: storeId || currentUser?.currentStore?.code || '',
@@ -533,6 +611,8 @@ export function AuditPortalProvider({ children }) {
         isSyncing,
         hasAddedAudit,
         audits: storeAudits,
+        currentAssignmentAudits,
+        pastAudits,
         createNewAudit,
         updateAuditMetadata,
         addProductsToAudit,
