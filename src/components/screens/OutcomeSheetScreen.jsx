@@ -221,6 +221,7 @@ export function OutcomeSheetScreen({ mode = 'add' }) {
   const toast = useToast();
 
   const [dateSearch, setDateSearch] = useState('');
+  const [viewingDetail, setViewingDetail] = useState(false);
   const [recommendationReason, setRecommendationReason] = useState(
     selectedAudit?.recommendationReason || ''
   );
@@ -343,7 +344,7 @@ export function OutcomeSheetScreen({ mode = 'add' }) {
     setActiveScreen('VIEW_OUTCOME');
   };
 
-  // VIEW MODE: Audit Sheet List (AuditList.aspx) + Outcome Sheet Details
+  // VIEW MODE: Either Audit Sheet List (with View & Edit buttons) OR Dedicated Outcome Sheet Detail View
   if (mode === 'view') {
     const submittedAudits = audits.filter((a) => {
       const matchesDate =
@@ -352,470 +353,360 @@ export function OutcomeSheetScreen({ mode = 'add' }) {
       return matchesDate;
     });
 
-    return (
-      <div className="max-w-6xl mx-auto space-y-5">
-        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 overflow-hidden">
-          <div className="bg-gradient-to-r from-[#064e2b] to-[#0b663a] text-white px-5 py-4 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base sm:text-lg font-bold tracking-tight">
-              Audit Sheet List
-            </h2>
-            <span className="text-xs bg-white/15 px-3 py-1 rounded-full font-semibold">
-              {submittedAudits.length} Record(s)
-            </span>
-          </div>
-
-          {/* Search By Date Bar */}
-          <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-wrap items-center gap-2.5">
-            <label className="text-xs sm:text-sm font-semibold text-slate-700">Date:</label>
-            <input
-              type="text"
-              value={dateSearch}
-              onChange={(e) => setDateSearch(e.target.value)}
-              placeholder="e.g. 10-Nov-2026"
-              className="h-9 px-3 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-[#064e2b]"
-            />
+    // Dedicated Outcome Sheet Detail View (shown when user clicks "View")
+    if (viewingDetail && selectedAudit) {
+      return (
+        <div className="max-w-6xl mx-auto space-y-5">
+          {/* Top Navigation Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
             <button
               type="button"
-              className="h-9 px-4 bg-[#064e2b] hover:bg-[#053e22] text-white text-xs sm:text-sm font-semibold rounded-xl inline-flex items-center gap-1.5 cursor-pointer"
+              onClick={() => setViewingDetail(false)}
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold rounded-xl inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
-              <Search className="w-3.5 h-3.5" />
-              Search
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Audit Sheet List</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveScreen('ADD_OUTCOME')}
+              className="px-4 py-2.5 bg-[#064e2b] hover:bg-[#053e22] text-white text-xs sm:text-sm font-semibold rounded-xl inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Edit Outcome Sheet</span>
             </button>
           </div>
 
-          {/* Mobile Cards (< md) */}
-          <div className="p-3.5 space-y-3 md:hidden">
-            {submittedAudits.map((a) => (
-              <div
-                key={a.appId}
-                className={`rounded-2xl border p-3.5 space-y-2.5 text-xs ${
-                  selectedAudit?.appId === a.appId
-                    ? 'border-emerald-300 bg-emerald-50/50'
-                    : 'border-slate-200 bg-slate-50/40'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-bold text-sm text-[#064e2b]">
-                    {a.storeName} ({a.storeId})
-                  </span>
-                  <span className="font-mono text-[11px] bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
-                    {a.date}
-                  </span>
-                </div>
-                <div className="text-slate-600">{a.address}</div>
-                <div className="grid grid-cols-2 gap-2 text-slate-700">
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Representative</span>
-                    <strong>{a.storeRep}</strong> ({a.designation})
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Auditor / Time</span>
-                    <strong>{a.auditor}</strong> &bull; {a.timeIn}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedAuditId(a.appId);
-                    setActiveScreen('ADD_OUTCOME');
-                  }}
-                  className="w-full py-2.5 bg-[#064e2b] hover:bg-[#053e22] text-white text-xs font-semibold rounded-xl inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  {a.outcomeSubmitted ? 'Edit Outcome Sheet' : 'Fill Outcome Sheet'}
-                </button>
+          <div className="p-4 sm:p-6 rounded-2xl border border-emerald-200 bg-white shadow-xs space-y-5">
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200 pb-3">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-[#064e2b]">
+                  Submitted Outcome Sheet — Audit #{selectedAudit.appId}
+                </h3>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  {selectedAudit.storeName} (#{selectedAudit.storeId})
+                </p>
               </div>
-            ))}
-          </div>
+              <span className="text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-full">
+                Submitted: {selectedAudit.outcomeData?.submittedAt || selectedAudit.date}
+              </span>
+            </div>
 
-          {/* Desktop GridView1 Table (md+) */}
-          <div className="hidden md:block p-4 overflow-x-auto">
-            <table
-              id="GridView1"
-              className="w-full text-left border-collapse border border-slate-200 rounded-xl text-xs sm:text-sm overflow-hidden"
-            >
-              <thead>
-                <tr className="bg-[#064e2b] text-white text-[11px] uppercase tracking-wider">
-                  <th className="py-3 px-3">Store ID</th>
-                  <th className="py-3 px-3">Store Address</th>
-                  <th className="py-3 px-3">Store Representative</th>
-                  <th className="py-3 px-3">Auditor</th>
-                  <th className="py-3 px-3">Designation</th>
-                  <th className="py-3 px-3">Audit Date</th>
-                  <th className="py-3 px-3">Date</th>
-                  <th className="py-3 px-3">Time In</th>
-                  <th className="py-3 px-3 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {submittedAudits.map((a) => (
-                  <tr
-                    key={a.appId}
-                    className={`hover:bg-emerald-50/40 ${
-                      selectedAudit?.appId === a.appId ? 'bg-emerald-50/70' : 'bg-white'
-                    }`}
-                  >
-                    <td className="py-2.5 px-3 font-mono font-semibold text-[#064e2b]">
-                      {a.storeId}
-                    </td>
-                    <td className="py-2.5 px-3">{a.address}</td>
-                    <td className="py-2.5 px-3">{a.storeRep}</td>
-                    <td className="py-2.5 px-3">{a.auditor}</td>
-                    <td className="py-2.5 px-3">{a.designation}</td>
-                    <td className="py-2.5 px-3">{a.outcomeData?.ncrDate || a.date}</td>
-                    <td className="py-2.5 px-3">{a.date}</td>
-                    <td className="py-2.5 px-3 font-mono">{a.timeIn}</td>
-                    <td className="py-2.5 px-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedAuditId(a.appId);
-                          setActiveScreen('ADD_OUTCOME');
-                        }}
-                        className="px-3 py-1.5 bg-[#064e2b] hover:bg-[#053e22] text-white text-xs font-semibold rounded-lg inline-flex items-center gap-1 cursor-pointer"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                        {a.outcomeSubmitted ? 'Edit Sheet' : 'Fill Sheet'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Selected Audit Outcome Summary + Checklist Summary + Scoring Matrix + Final Admin Recommendation */}
-          {selectedAudit?.outcomeData && (
-            <div className="mx-3.5 sm:mx-4 mb-4 p-4 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/40 space-y-5">
-              {/* Header */}
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200 pb-3">
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-[#064e2b]">
-                    Submitted Outcome Sheet — Audit #{selectedAudit.appId}
-                  </h3>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    {selectedAudit.storeName} (#{selectedAudit.storeId})
-                  </p>
-                </div>
-                <span className="text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-full">
-                  Submitted: {selectedAudit.outcomeData.submittedAt || selectedAudit.date}
-                </span>
+            {/* Store & Audit Details Table */}
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+              <div className="bg-[#064e2b] text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider">
+                Audit Details
               </div>
-
-              {/* Store & Audit Details Table */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-                <div className="bg-[#064e2b] text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider">
-                  Audit Details
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:gap-px bg-slate-100 text-xs sm:text-sm">
-                  {[
-                    { label: 'Branch Code', value: selectedAudit.storeId || '—', mono: true },
-                    { label: 'Store Address', value: selectedAudit.address || '—' },
-                    {
-                      label: 'Store Representative',
-                      value: selectedAudit.outcomeData?.storeRep || selectedAudit.storeRep || '—'
-                    },
-                    {
-                      label: 'Designation',
-                      value:
-                        selectedAudit.outcomeData?.designation || selectedAudit.designation || '—'
-                    },
-                    {
-                      label: 'Auditor',
-                      value: selectedAudit.outcomeData?.auditorName || selectedAudit.auditor || '—'
-                    },
-                    { label: 'Audit Date', value: selectedAudit.date || '—', mono: true },
-                    {
-                      label: 'Time In',
-                      value: selectedAudit.outcomeData?.timeIn || selectedAudit.timeIn || '—',
-                      mono: true
-                    },
-                    {
-                      label: 'Time Out',
-                      value: selectedAudit.finalized
-                        ? selectedAudit.timeOut || '—'
-                        : 'Pending recommendation',
-                      mono: selectedAudit.finalized,
-                      muted: !selectedAudit.finalized
-                    }
-                  ].map((item) => (
-                    <div key={item.label} className="bg-white p-3.5">
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                        {item.label}
-                      </span>
-                      <span
-                        className={`font-semibold break-words ${
-                          item.muted
-                            ? 'text-amber-700 italic text-xs'
-                            : 'text-slate-900'
-                        } ${item.mono ? 'font-mono' : ''}`}
-                      >
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* NCR & RSR Signatures */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
-                  <h4 className="font-bold text-[#064e2b] border-b border-slate-100 pb-1.5">
-                    NCR (Auditor Acknowledgement)
-                  </h4>
-                  <p>
-                    <strong>Understood Date:</strong> {selectedAudit.outcomeData.ncrDate}
-                  </p>
-                  <p>
-                    <strong>Print Name:</strong> {selectedAudit.outcomeData.ncrPrintName}
-                  </p>
-                  {selectedAudit.outcomeData.ncrSignature && (
-                    <div className="pt-1">
-                      <p className="text-xs text-slate-500 mb-1">Signature:</p>
-                      <img
-                        src={selectedAudit.outcomeData.ncrSignature}
-                        alt="NCR Signature"
-                        className="h-20 border border-slate-200 rounded-xl bg-white"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
-                  <h4 className="font-bold text-[#064e2b] border-b border-slate-100 pb-1.5">
-                    RSR (Shift Runner Representation)
-                  </h4>
-                  <p>
-                    <strong>Representation:</strong>{' '}
-                    {selectedAudit.outcomeData.rsrResponse || 'None recorded'}
-                  </p>
-                  <p>
-                    <strong>Print Name:</strong> {selectedAudit.outcomeData.rsrPrintName}
-                  </p>
-                  {selectedAudit.outcomeData.rsrSignature && (
-                    <div className="pt-1">
-                      <p className="text-xs text-slate-500 mb-1">Signature:</p>
-                      <img
-                        src={selectedAudit.outcomeData.rsrSignature}
-                        alt="RSR Signature"
-                        className="h-20 border border-slate-200 rounded-xl bg-white"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 1. Checklist Points Summary */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-                <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <ClipboardCheck className="w-4 h-4 text-emerald-300 shrink-0" />
-                    <h4 className="text-xs sm:text-sm font-bold tracking-wide uppercase">
-                      Checklist Points Summary
-                    </h4>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
-                      Pass: {scoreCounts.Pass}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:gap-px bg-slate-100 text-xs sm:text-sm">
+                {[
+                  { label: 'Branch Code', value: selectedAudit.storeId || '—', mono: true },
+                  { label: 'Store Address', value: selectedAudit.address || '—' },
+                  {
+                    label: 'Store Representative',
+                    value: selectedAudit.outcomeData?.storeRep || selectedAudit.storeRep || '—'
+                  },
+                  {
+                    label: 'Designation',
+                    value:
+                      selectedAudit.outcomeData?.designation || selectedAudit.designation || '—'
+                  },
+                  {
+                    label: 'Auditor',
+                    value: selectedAudit.outcomeData?.auditorName || selectedAudit.auditor || '—'
+                  },
+                  { label: 'Audit Date', value: selectedAudit.date || '—', mono: true },
+                  {
+                    label: 'Time In',
+                    value: selectedAudit.outcomeData?.timeIn || selectedAudit.timeIn || '—',
+                    mono: true
+                  },
+                  {
+                    label: 'Time Out',
+                    value: selectedAudit.finalized
+                      ? selectedAudit.timeOut || '—'
+                      : 'Pending recommendation',
+                    mono: selectedAudit.finalized,
+                    muted: !selectedAudit.finalized
+                  }
+                ].map((item) => (
+                  <div key={item.label} className="bg-white p-3.5">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      {item.label}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-200 border border-amber-400/30">
-                      L1: {scoreCounts.L1}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-200 border border-orange-400/30">
-                      L2: {scoreCounts.L2}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-200 border border-rose-400/30">
-                      L3: {scoreCounts.L3}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Mobile Stacked Summary */}
-                <div className="md:hidden divide-y divide-slate-100">
-                  {checklistSummaryRows.map((row) => (
-                    <div key={row.code} className="p-3.5 space-y-1.5 text-xs">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <span className="font-mono font-bold text-[#064e2b] mr-1.5">
-                            {row.code}
-                          </span>
-                          <span className="font-semibold text-slate-900">{row.auditPoint}</span>
-                        </div>
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${getScorePillClass(
-                            row.score
-                          )}`}
-                        >
-                          {row.score}
-                        </span>
-                      </div>
-                      {row.comment && (
-                        <p className="text-[11px] text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
-                          {row.comment}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Desktop Table Summary */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs sm:text-sm">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500">
-                        <th className="py-2.5 px-3.5 w-20">Point</th>
-                        <th className="py-2.5 px-3.5">Audit Point</th>
-                        <th className="py-2.5 px-3.5 w-28 text-center">Score</th>
-                        <th className="py-2.5 px-3.5 w-72">Auditor Comments</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {checklistSummaryRows.map((row) => (
-                        <tr key={row.code} className="hover:bg-slate-50/70">
-                          <td className="py-2.5 px-3.5 font-mono font-bold text-[#064e2b]">
-                            {row.code}
-                          </td>
-                          <td className="py-2.5 px-3.5 font-medium text-slate-800">
-                            {row.auditPoint}
-                          </td>
-                          <td className="py-2.5 px-3.5 text-center">
-                            <span
-                              className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getScorePillClass(
-                                row.score
-                              )}`}
-                            >
-                              {row.score}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3.5 text-xs text-slate-600">
-                            {row.comment || <span className="text-slate-400 italic">—</span>}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 2. Scoring Matrix Reference */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-                <div className="bg-[#04391f] text-white px-4 py-2.5 flex items-center justify-between">
-                  <h4 className="text-xs sm:text-sm font-bold tracking-wide uppercase">
-                    Scoring Matrix
-                  </h4>
-                  <span className="text-[11px] text-emerald-200 font-medium">
-                    Use as reference for your final recommendation
-                  </span>
-                </div>
-                <div className="p-3.5 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                  {SCORING_MATRIX.map((item) => (
-                    <div
-                      key={item.level}
-                      className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-2.5"
+                    <span
+                      className={`font-semibold break-words ${
+                        item.muted ? 'text-amber-700 italic text-xs' : 'text-slate-900'
+                      } ${item.mono ? 'font-mono' : ''}`}
                     >
-                      <span
-                        className={`px-2 py-0.5 rounded-md font-bold text-[11px] shrink-0 border ${getScorePillClass(
-                          item.level
-                        )}`}
-                      >
-                        {item.level}
-                      </span>
-                      <span className="text-slate-700 leading-relaxed">{item.description}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 3. Final Recommendation to HFA Admin (Finishes Audit) */}
-              <div className="bg-white rounded-xl border-2 border-emerald-200/90 overflow-hidden shadow-xs">
-                <div className="bg-gradient-to-r from-[#064e2b] to-[#0b663a] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-4 h-4 text-emerald-200 shrink-0" />
-                    <h4 className="text-xs sm:text-sm font-bold tracking-wide uppercase">
-                      Final Recommendation to HFA Admin
-                    </h4>
-                  </div>
-                  {selectedAudit.finalized && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/15 text-emerald-100 text-[11px] font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Audit Finished
+                      {item.value}
                     </span>
-                  )}
-                </div>
-
-                <div className="p-4 sm:p-5 space-y-4">
-                  {selectedAudit.finalized ? (
-                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2 text-xs sm:text-sm">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 font-bold text-[#064e2b]">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                          <span>
-                            Audit Completed &amp; Recommended as:{' '}
-                            <span className="underline">
-                              {selectedAudit.backendCategory || 'Recommend For Pass'}
-                            </span>
-                          </span>
-                        </div>
-                        {selectedAudit.finalizedAt && (
-                          <span className="text-[11px] text-emerald-700 font-medium">
-                            {selectedAudit.finalizedAt}
-                          </span>
-                        )}
-                      </div>
-                      {selectedAudit.recommendationReason && (
-                        <div className="pt-2 border-t border-emerald-200/70 text-slate-700">
-                          <strong className="text-slate-900">Auditor Reason:</strong>{' '}
-                          {selectedAudit.recommendationReason}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        <label
-                          htmlFor="recommendation-reason"
-                          className="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5"
-                        >
-                          Reason for Recommendation
-                        </label>
-                        <textarea
-                          id="recommendation-reason"
-                          rows={3}
-                          value={recommendationReason}
-                          onChange={(e) => setRecommendationReason(e.target.value)}
-                          placeholder="Write your reason or key findings supporting your recommendation to HFA Admin..."
-                          className="w-full p-3 text-xs sm:text-sm border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:border-[#064e2b] focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
-                        />
-                      </div>
-
-                      <div className="space-y-2.5">
-                        <p className="text-xs font-semibold text-slate-600">
-                          Select your final recommendation below to complete and submit this audit to HFA Admin:
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                          {RECOMMENDATION_OPTIONS.map((opt) => {
-                            const Icon = opt.icon;
-                            return (
-                              <button
-                                key={opt.id}
-                                type="button"
-                                disabled={isSyncing}
-                                onClick={() => setPendingRecommendation(opt)}
-                                className={`min-h-[46px] px-4 py-2.5 rounded-full font-bold text-xs sm:text-sm border shadow-xs inline-flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer ${opt.btnClass}`}
-                              >
-                                <Icon className="w-4 h-4 shrink-0" />
-                                <span>{opt.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
-          )}
+
+            {/* NCR & RSR Signatures */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+              <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                <h4 className="font-bold text-[#064e2b] border-b border-slate-100 pb-1.5">
+                  NCR (Auditor Acknowledgement)
+                </h4>
+                <p>
+                  <strong>Understood Date:</strong>{' '}
+                  {selectedAudit.outcomeData?.ncrDate || selectedAudit.date || '—'}
+                </p>
+                <p>
+                  <strong>Print Name:</strong>{' '}
+                  {selectedAudit.outcomeData?.ncrPrintName || selectedAudit.auditor || '—'}
+                </p>
+                {selectedAudit.outcomeData?.ncrSignature && (
+                  <div className="pt-1">
+                    <p className="text-xs text-slate-500 mb-1">Signature:</p>
+                    <img
+                      src={selectedAudit.outcomeData.ncrSignature}
+                      alt="NCR Signature"
+                      className="h-20 border border-slate-200 rounded-xl bg-white"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                <h4 className="font-bold text-[#064e2b] border-b border-slate-100 pb-1.5">
+                  RSR (Shift Runner Representation)
+                </h4>
+                <p>
+                  <strong>Representation:</strong>{' '}
+                  {selectedAudit.outcomeData?.rsrResponse || 'None recorded'}
+                </p>
+                <p>
+                  <strong>Print Name:</strong>{' '}
+                  {selectedAudit.outcomeData?.rsrPrintName || selectedAudit.storeRep || '—'}
+                </p>
+                {selectedAudit.outcomeData?.rsrSignature && (
+                  <div className="pt-1">
+                    <p className="text-xs text-slate-500 mb-1">Signature:</p>
+                    <img
+                      src={selectedAudit.outcomeData.rsrSignature}
+                      alt="RSR Signature"
+                      className="h-20 border border-slate-200 rounded-xl bg-white"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 1. Checklist Points Summary */}
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+              <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ClipboardCheck className="w-4 h-4 text-emerald-300 shrink-0" />
+                  <h4 className="text-xs sm:text-sm font-bold tracking-wide uppercase">
+                    Checklist Points Summary
+                  </h4>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+                    Pass: {scoreCounts.Pass}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-200 border border-amber-400/30">
+                    L1: {scoreCounts.L1}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-200 border border-orange-400/30">
+                    L2: {scoreCounts.L2}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-200 border border-rose-400/30">
+                    L3: {scoreCounts.L3}
+                  </span>
+                </div>
+              </div>
+
+              {/* Mobile Stacked Summary */}
+              <div className="md:hidden divide-y divide-slate-100">
+                {checklistSummaryRows.map((row) => (
+                  <div key={row.code} className="p-3.5 space-y-1.5 text-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="font-mono font-bold text-[#064e2b] mr-1.5">
+                          {row.code}
+                        </span>
+                        <span className="font-semibold text-slate-900">{row.auditPoint}</span>
+                      </div>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${getScorePillClass(
+                          row.score
+                        )}`}
+                      >
+                        {row.score}
+                      </span>
+                    </div>
+                    {row.comment && (
+                      <p className="text-[11px] text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
+                        {row.comment}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table Summary */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500">
+                      <th className="py-2.5 px-3.5 w-20">Point</th>
+                      <th className="py-2.5 px-3.5">Audit Point</th>
+                      <th className="py-2.5 px-3.5 w-28 text-center">Score</th>
+                      <th className="py-2.5 px-3.5 w-72">Auditor Comments</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {checklistSummaryRows.map((row) => (
+                      <tr key={row.code} className="hover:bg-slate-50/70">
+                        <td className="py-2.5 px-3.5 font-mono font-bold text-[#064e2b]">
+                          {row.code}
+                        </td>
+                        <td className="py-2.5 px-3.5 font-medium text-slate-800">
+                          {row.auditPoint}
+                        </td>
+                        <td className="py-2.5 px-3.5 text-center">
+                          <span
+                            className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getScorePillClass(
+                              row.score
+                            )}`}
+                          >
+                            {row.score}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3.5 text-xs text-slate-600">
+                          {row.comment || <span className="text-slate-400 italic">—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 2. Scoring Matrix Reference */}
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+              <div className="bg-[#04391f] text-white px-4 py-2.5 flex items-center justify-between">
+                <h4 className="text-xs sm:text-sm font-bold tracking-wide uppercase">
+                  Scoring Matrix
+                </h4>
+                <span className="text-[11px] text-emerald-200 font-medium">
+                  Use as reference for your final recommendation
+                </span>
+              </div>
+              <div className="p-3.5 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                {SCORING_MATRIX.map((item) => (
+                  <div
+                    key={item.level}
+                    className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-2.5"
+                  >
+                    <span
+                      className={`px-2 py-0.5 rounded-md font-bold text-[11px] shrink-0 border ${getScorePillClass(
+                        item.level
+                      )}`}
+                    >
+                      {item.level}
+                    </span>
+                    <span className="text-slate-700 leading-relaxed">{item.description}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Final Recommendation to HFA Admin (Finishes Audit) */}
+            <div className="bg-white rounded-xl border-2 border-emerald-200/90 overflow-hidden shadow-xs">
+              <div className="bg-gradient-to-r from-[#064e2b] to-[#0b663a] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-emerald-200 shrink-0" />
+                  <h4 className="text-xs sm:text-sm font-bold tracking-wide uppercase">
+                    Final Recommendation to HFA Admin
+                  </h4>
+                </div>
+                {selectedAudit.finalized && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/15 text-emerald-100 text-[11px] font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Audit Finished
+                  </span>
+                )}
+              </div>
+
+              <div className="p-4 sm:p-5 space-y-4">
+                {selectedAudit.finalized ? (
+                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2 text-xs sm:text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 font-bold text-[#064e2b]">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                        <span>
+                          Audit Completed &amp; Recommended as:{' '}
+                          <span className="underline">
+                            {selectedAudit.backendCategory || 'Recommend For Pass'}
+                          </span>
+                        </span>
+                      </div>
+                      {selectedAudit.finalizedAt && (
+                        <span className="text-[11px] text-emerald-700 font-medium">
+                          {selectedAudit.finalizedAt}
+                        </span>
+                      )}
+                    </div>
+                    {selectedAudit.recommendationReason && (
+                      <div className="pt-2 border-t border-emerald-200/70 text-slate-700">
+                        <strong className="text-slate-900">Auditor Reason:</strong>{' '}
+                        {selectedAudit.recommendationReason}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label
+                        htmlFor="recommendation-reason"
+                        className="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5"
+                      >
+                        Reason for Recommendation
+                      </label>
+                      <textarea
+                        id="recommendation-reason"
+                        rows={3}
+                        value={recommendationReason}
+                        onChange={(e) => setRecommendationReason(e.target.value)}
+                        placeholder="Write your reason or key findings supporting your recommendation to HFA Admin..."
+                        className="w-full p-3 text-xs sm:text-sm border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:border-[#064e2b] focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <p className="text-xs font-semibold text-slate-600">
+                        Select your final recommendation below to complete and submit this audit to HFA Admin:
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                        {RECOMMENDATION_OPTIONS.map((opt) => {
+                          const Icon = opt.icon;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              disabled={isSyncing}
+                              onClick={() => setPendingRecommendation(opt)}
+                              className={`min-h-[46px] px-4 py-2.5 rounded-full font-bold text-xs sm:text-sm border shadow-xs inline-flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer ${opt.btnClass}`}
+                            >
+                              <Icon className="w-4 h-4 shrink-0" />
+                              <span>{opt.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Confirmation Modal for Final Recommendation */}
           {pendingRecommendation && (
@@ -893,6 +784,187 @@ export function OutcomeSheetScreen({ mode = 'add' }) {
               </div>
             </div>
           )}
+        </div>
+      );
+    }
+
+    // Default: Clean Audit Sheet List (NO inline outcome sheet details; View + Edit buttons per row)
+    return (
+      <div className="max-w-6xl mx-auto space-y-5">
+        <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 overflow-hidden">
+          <div className="bg-gradient-to-r from-[#064e2b] to-[#0b663a] text-white px-5 py-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base sm:text-lg font-bold tracking-tight">
+              Audit Sheet List
+            </h2>
+            <span className="text-xs bg-white/15 px-3 py-1 rounded-full font-semibold">
+              {submittedAudits.length} Record(s)
+            </span>
+          </div>
+
+          {/* Search By Date Bar */}
+          <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-wrap items-center gap-2.5">
+            <label className="text-xs sm:text-sm font-semibold text-slate-700">Date:</label>
+            <input
+              type="text"
+              value={dateSearch}
+              onChange={(e) => setDateSearch(e.target.value)}
+              placeholder="e.g. 26-Nov-2026"
+              className="h-9 px-3 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-[#064e2b]"
+            />
+            <button
+              type="button"
+              className="h-9 px-4 bg-[#064e2b] hover:bg-[#053e22] text-white text-xs sm:text-sm font-semibold rounded-xl inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Search className="w-3.5 h-3.5" />
+              Search
+            </button>
+          </div>
+
+          {/* Mobile Cards (< md) */}
+          <div className="p-3.5 space-y-3 md:hidden">
+            {submittedAudits.map((a) => {
+              const hasSheet = Boolean(a.outcomeSubmitted || a.outcomeData);
+              return (
+                <div
+                  key={a.appId}
+                  className={`rounded-2xl border p-3.5 space-y-2.5 text-xs ${
+                    selectedAudit?.appId === a.appId
+                      ? 'border-emerald-300 bg-emerald-50/50'
+                      : 'border-slate-200 bg-slate-50/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm text-[#064e2b]">
+                      {a.storeName} ({a.storeId})
+                    </span>
+                    <span className="font-mono text-[11px] bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
+                      {a.date}
+                    </span>
+                  </div>
+                  <div className="text-slate-600">{a.address}</div>
+                  <div className="grid grid-cols-2 gap-2 text-slate-700">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                        Representative
+                      </span>
+                      <strong>{a.storeRep}</strong> ({a.designation})
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+                        Auditor / Time
+                      </span>
+                      <strong>{a.auditor}</strong> &bull; {a.timeIn}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={!hasSheet}
+                      onClick={() => {
+                        setSelectedAuditId(a.appId);
+                        setViewingDetail(true);
+                      }}
+                      className="py-2.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-xl inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAuditId(a.appId);
+                        setActiveScreen('ADD_OUTCOME');
+                      }}
+                      className="py-2.5 bg-[#064e2b] hover:bg-[#053e22] text-white text-xs font-semibold rounded-xl inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>{hasSheet ? 'Edit' : 'Fill Sheet'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop GridView1 Table (md+) */}
+          <div className="hidden md:block p-4 overflow-x-auto">
+            <table
+              id="GridView1"
+              className="w-full text-left border-collapse border border-slate-200 rounded-xl text-xs sm:text-sm overflow-hidden"
+            >
+              <thead>
+                <tr className="bg-[#064e2b] text-white text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-3">Store ID</th>
+                  <th className="py-3 px-3">Store Address</th>
+                  <th className="py-3 px-3">Store Representative</th>
+                  <th className="py-3 px-3">Auditor</th>
+                  <th className="py-3 px-3">Designation</th>
+                  <th className="py-3 px-3">Audit Date</th>
+                  <th className="py-3 px-3">Time In</th>
+                  <th className="py-3 px-3">Time Out</th>
+                  <th className="py-3 px-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {submittedAudits.map((a) => {
+                  const hasSheet = Boolean(a.outcomeSubmitted || a.outcomeData);
+                  return (
+                    <tr
+                      key={a.appId}
+                      className={`hover:bg-emerald-50/40 ${
+                        selectedAudit?.appId === a.appId ? 'bg-emerald-50/70' : 'bg-white'
+                      }`}
+                    >
+                      <td className="py-2.5 px-3 font-mono font-semibold text-[#064e2b]">
+                        {a.storeId}
+                      </td>
+                      <td className="py-2.5 px-3">{a.address}</td>
+                      <td className="py-2.5 px-3">{a.storeRep}</td>
+                      <td className="py-2.5 px-3">{a.auditor}</td>
+                      <td className="py-2.5 px-3">{a.designation}</td>
+                      <td className="py-2.5 px-3 whitespace-nowrap">{a.date}</td>
+                      <td className="py-2.5 px-3 font-mono">{a.timeIn || '—'}</td>
+                      <td className="py-2.5 px-3 font-mono">
+                        {a.finalized ? a.timeOut || '—' : '—'}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={!hasSheet}
+                            onClick={() => {
+                              setSelectedAuditId(a.appId);
+                              setViewingDetail(true);
+                            }}
+                            title={
+                              hasSheet
+                                ? 'View Outcome Sheet & Final Recommendation'
+                                : 'Fill Outcome Sheet first to view details'
+                            }
+                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>View</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedAuditId(a.appId);
+                              setActiveScreen('ADD_OUTCOME');
+                            }}
+                            className="px-3 py-1.5 bg-[#064e2b] hover:bg-[#053e22] text-white text-xs font-semibold rounded-lg inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>{hasSheet ? 'Edit' : 'Fill'}</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
           <div className="p-4 border-t border-slate-100 flex flex-wrap gap-3">
             <button
