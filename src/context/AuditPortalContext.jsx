@@ -127,6 +127,7 @@ function toBackendAuditPayload(audit) {
     checklistOverallComment: audit.checklistOverallComment,
     outcomeData: audit.outcomeData,
     recommendationReason: audit.recommendationReason || '',
+    auditorRecommendation: audit.auditorRecommendation || audit.backendCategory || '',
     finalized: Boolean(audit.finalized),
     finalizedAt: audit.finalizedAt || '',
     complianceSummary: {
@@ -624,6 +625,7 @@ export function AuditPortalProvider({ children }) {
     const updatedAudit = {
       ...target,
       backendCategory,
+      auditorRecommendation: label,
       statusCategory: localStatus,
       recommendationReason: (reason || '').trim(),
       finalized: true,
