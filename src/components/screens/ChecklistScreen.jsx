@@ -234,17 +234,6 @@ export function ChecklistScreen({ mode = 'add' }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                outcomeEval.category === 'PASSED'
-                  ? 'bg-emerald-500/20 text-emerald-100 border-emerald-300/40'
-                  : outcomeEval.category === 'L3_FAIL'
-                  ? 'bg-rose-500 text-white border-rose-300'
-                  : 'bg-amber-500 text-white border-amber-300'
-              }`}
-            >
-              Outcome: {outcomeEval.label}
-            </span>
             {isViewOnly && (
               <button
                 type="button"
@@ -265,17 +254,6 @@ export function ChecklistScreen({ mode = 'add' }) {
               <h3 className="text-xs sm:text-sm lg:text-base font-bold tracking-wide">
                 SCORING MATRIX
               </h3>
-              <span
-                className={`px-2.5 py-0.5 lg:px-3 lg:py-1 rounded-full text-[11px] lg:text-xs font-bold border ${
-                  outcomeEval.category === 'PASSED'
-                    ? 'bg-emerald-600 text-white border-emerald-400'
-                    : outcomeEval.category === 'L3_FAIL'
-                    ? 'bg-rose-600 text-white border-rose-400'
-                    : 'bg-amber-500 text-white border-amber-300'
-                }`}
-              >
-                {outcomeEval.label}
-              </span>
               <span className="text-[11px] lg:text-xs text-emerald-200 font-mono">
                 L1: {outcomeEval.l1Count} | L2: {outcomeEval.l2Count} | L3: {outcomeEval.l3Count}
               </span>
