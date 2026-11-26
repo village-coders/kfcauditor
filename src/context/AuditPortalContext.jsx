@@ -3,6 +3,7 @@ import { evaluateChecklistOutcome } from '../data/kfcAuditData';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
 import { apiRequest } from '../services/apiClient';
+import { logAuditorActivity } from '../services/activityLogger';
 
 const AuditPortalContext = createContext(null);
 
@@ -480,6 +481,14 @@ export function AuditPortalProvider({ children }) {
     setShowNewAuditModal(false);
     setActiveScreen('AUDIT_LIST');
     syncAuditToBackend(newAudit, true);
+    logAuditorActivity({
+      auditor: newAudit.auditor,
+      storeName: newAudit.storeName,
+      branchCode: newAudit.storeId,
+      auditAppId: newAudit.appId,
+      activity: 'New Audit',
+      session: newAudit.sessionRound
+    });
     toast.success(`Audit #${newId} created for ${newAudit.storeName}.`, 'New Audit Created');
     return newAudit;
   };
@@ -586,6 +595,14 @@ export function AuditPortalProvider({ children }) {
     };
     setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
     syncAuditToBackend(updatedAudit);
+    logAuditorActivity({
+      auditor: updatedAudit.auditor,
+      storeName: updatedAudit.storeName,
+      branchCode: updatedAudit.storeId,
+      auditAppId: updatedAudit.appId,
+      activity: 'Checklist Submitted',
+      session: updatedAudit.sessionRound
+    });
     toast.success('Check List submitted! Proceed to Outcome Sheet.', 'Check List Submitted');
   };
 
@@ -604,6 +621,14 @@ export function AuditPortalProvider({ children }) {
     };
     setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
     syncAuditToBackend(updatedAudit);
+    logAuditorActivity({
+      auditor: updatedAudit.auditor,
+      storeName: updatedAudit.storeName,
+      branchCode: updatedAudit.storeId,
+      auditAppId: updatedAudit.appId,
+      activity: 'Outcome Sheet Submitted',
+      session: updatedAudit.sessionRound
+    });
     toast.success(
       'Outcome Sheet saved. Review the checklist summary and submit your final recommendation to Admin.',
       'Outcome Sheet Saved'
@@ -634,6 +659,14 @@ export function AuditPortalProvider({ children }) {
     };
     setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
     await syncAuditToBackend(updatedAudit);
+    logAuditorActivity({
+      auditor: updatedAudit.auditor,
+      storeName: updatedAudit.storeName,
+      branchCode: updatedAudit.storeId,
+      auditAppId: updatedAudit.appId,
+      activity: `Recommendation (${label})`,
+      session: updatedAudit.sessionRound
+    });
     toast.success(
       `Audit #${appId} finalized at ${completedTimeOut} and sent to HFA Admin as "${label}".`,
       'Audit Finished & Submitted'

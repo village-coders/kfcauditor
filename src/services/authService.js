@@ -1,4 +1,5 @@
 import { apiRequest } from './apiClient';
+import { logAuditorActivity } from './activityLogger';
 
 const SESSION_KEY = 'kfc_auditor_session';
 const SAVED_CREDENTIALS_KEY = 'kfc_auditor_remembered';
@@ -144,6 +145,14 @@ export async function loginAuditor({ username, store, password, rememberPassword
 
   localStorage.setItem(SESSION_KEY, JSON.stringify(userSession));
 
+  logAuditorActivity({
+    auditor: userSession.username,
+    storeName: selectedStore.shortName || selectedStore.name,
+    branchCode: selectedStore.branchCode || selectedStore.code || '',
+    activity: 'Auditor Login',
+    session: selectedStore.session || 'Round Three 2026'
+  });
+
   return {
     success: true,
     user: userSession
@@ -169,5 +178,15 @@ export function getSavedCredentials() {
 }
 
 export function logoutAuditor() {
+  const session = getCurrentSession();
+  if (session?.username) {
+    logAuditorActivity({
+      auditor: session.username,
+      storeName: session.currentStore?.shortName || session.currentStore?.name || 'KFC Store',
+      branchCode: session.currentStore?.branchCode || session.currentStore?.code || '',
+      activity: 'Auditor Logout',
+      session: session.currentStore?.session || 'Round Three 2026'
+    });
+  }
   localStorage.removeItem(SESSION_KEY);
 }
