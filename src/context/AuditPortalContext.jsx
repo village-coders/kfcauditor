@@ -31,7 +31,8 @@ function mapBackendCategoryToLocal(category) {
   return 'PENDING';
 }
 
-function mapLocalCategoryToBackend(statusCategory, recommendedCategory) {
+function mapLocalCategoryToBackend(statusCategory, recommendedCategory, explicitBackendCategory) {
+  if (explicitBackendCategory) return explicitBackendCategory;
   if (statusCategory === 'PASSED') return 'Passed';
   if (statusCategory === 'L3_FAIL') return 'L3 Critical Fail';
   if (statusCategory === 'OTHER_FAIL') return 'Other Fail';
@@ -82,6 +83,10 @@ function fromBackendAudit(doc) {
       rsrSignature: doc.signatureStoreRep || '',
       rsrPrintName: doc.storeRepresentative || ''
     } : null),
+    backendCategory: doc.category || '',
+    recommendationReason: doc.recommendationReason || '',
+    finalized: Boolean(doc.finalized),
+    finalizedAt: doc.finalizedAt || '',
     statusCategory: mapBackendCategoryToLocal(doc.category)
   };
 }
@@ -101,7 +106,11 @@ function toBackendAuditPayload(audit) {
     timeIn: audit.timeIn,
     timeOut: audit.timeOut,
     session: audit.sessionRound || 'Round Two 2026',
-    category: mapLocalCategoryToBackend(audit.statusCategory, audit.recommendedCategory),
+    category: mapLocalCategoryToBackend(
+      audit.statusCategory,
+      audit.recommendedCategory,
+      audit.backendCategory
+    ),
     storeRepresentative: audit.storeRep,
     designation: audit.designation,
     auditType: audit.auditType,
@@ -117,8 +126,15 @@ function toBackendAuditPayload(audit) {
     randomChecks: audit.randomChecks,
     checklistOverallComment: audit.checklistOverallComment,
     outcomeData: audit.outcomeData,
+    recommendationReason: audit.recommendationReason || '',
+    finalized: Boolean(audit.finalized),
+    finalizedAt: audit.finalizedAt || '',
     complianceSummary: {
-      auditorNotes: audit.checklistOverallComment || audit.outcomeData?.rsrResponse || ''
+      auditorNotes:
+        audit.recommendationReason ||
+        audit.checklistOverallComment ||
+        audit.outcomeData?.rsrResponse ||
+        ''
     }
   };
 }
@@ -572,25 +588,51 @@ export function AuditPortalProvider({ children }) {
     toast.success('Check List submitted! Proceed to Outcome Sheet.', 'Check List Submitted');
   };
 
-  // Save Outcome Sheet (scores are a recommendation; Admin grants final Passed status)
+  // Save Outcome Sheet (signatures & representation; auditor next chooses final recommendation)
   const saveAuditOutcome = (appId, outcomePayload) => {
     const target = audits.find((a) => a.appId === appId);
     if (!target) return;
-    const evalResult = evaluateChecklistOutcome(target.checklistScores);
-    // Never mark as PASSED directly from auditor side — send as Recommend For Pass (PENDING Admin approval)
-    const nextStatusCategory =
-      evalResult.category === 'PASSED' ? 'PENDING' : evalResult.category;
     const updatedAudit = {
       ...target,
       outcomeSubmitted: true,
       timeOut: formatTime(),
-      outcomeData: outcomePayload,
-      recommendedCategory: evalResult.category,
-      statusCategory: nextStatusCategory
+      outcomeData: outcomePayload
     };
     setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
     syncAuditToBackend(updatedAudit);
-    toast.success('Outcome Sheet submitted to Admin for final review.', 'Outcome Submitted');
+    toast.success(
+      'Outcome Sheet saved. Review the checklist summary and submit your final recommendation to Admin.',
+      'Outcome Sheet Saved'
+    );
+  };
+
+  // Finalize Audit & Submit Auditor Recommendation to HFA Admin
+  const submitFinalRecommendation = async (appId, { backendCategory, label, reason }) => {
+    const target = audits.find((a) => a.appId === appId);
+    if (!target) return false;
+    const localStatus =
+      backendCategory === 'L3 Critical Fail'
+        ? 'L3_FAIL'
+        : backendCategory === 'Other Fail'
+        ? 'OTHER_FAIL'
+        : 'PENDING';
+    const finalizedAt = new Date().toLocaleString();
+    const updatedAudit = {
+      ...target,
+      backendCategory,
+      statusCategory: localStatus,
+      recommendationReason: (reason || '').trim(),
+      finalized: true,
+      finalizedAt,
+      timeOut: target.timeOut || formatTime()
+    };
+    setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
+    await syncAuditToBackend(updatedAudit);
+    toast.success(
+      `Audit #${appId} finalized and sent to HFA Admin as "${label}".`,
+      'Audit Finished & Submitted'
+    );
+    return true;
   };
 
   return (
@@ -620,7 +662,8 @@ export function AuditPortalProvider({ children }) {
         updateProductComment,
         saveChecklistDraft,
         saveAuditChecklist,
-        saveAuditOutcome
+        saveAuditOutcome,
+        submitFinalRecommendation
       }}
     >
       {children}
