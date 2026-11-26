@@ -3,6 +3,7 @@ import { evaluateChecklistOutcome } from '../data/kfcAuditData';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
 import { apiRequest } from '../services/apiClient';
+import { logAuditorActivity } from '../services/activityLogger';
 
 const AuditPortalContext = createContext(null);
 
@@ -127,6 +128,7 @@ function toBackendAuditPayload(audit) {
     checklistOverallComment: audit.checklistOverallComment,
     outcomeData: audit.outcomeData,
     recommendationReason: audit.recommendationReason || '',
+    auditorRecommendation: audit.auditorRecommendation || audit.backendCategory || '',
     finalized: Boolean(audit.finalized),
     finalizedAt: audit.finalizedAt || '',
     complianceSummary: {
@@ -143,6 +145,31 @@ const AUDITS_STORAGE_KEY = 'kfc_hfa_portal_audits_v1';
 const ACTIVE_SCREEN_KEY = 'kfc_hfa_active_screen_v1';
 const SELECTED_AUDIT_KEY = 'kfc_hfa_selected_audit_v1';
 const PROTOCOL_KEY = 'kfc_hfa_protocol_accepted';
+
+const SCREEN_TO_PATH = {
+  DASHBOARD: '/dashboard',
+  AUDIT_LIST: '/audit-list',
+  PRODUCTS: '/products',
+  ADD_CHECKLIST: '/add-checklist',
+  VIEW_CHECKLIST: '/checklist',
+  ADD_OUTCOME: '/add-outcome',
+  VIEW_OUTCOME: '/outcome-sheet',
+  PASSED_LIST: '/passed-list',
+  PENDING_LIST: '/pending-list',
+  OTHER_FAILED_LIST: '/other-failed',
+  L3_LIST: '/l3-list',
+  MAP: '/map'
+};
+
+const PATH_TO_SCREEN = Object.entries(SCREEN_TO_PATH).reduce((acc, [screen, path]) => {
+  acc[path] = screen;
+  return acc;
+}, {});
+
+function screenFromPathname(pathname) {
+  const clean = String(pathname || '/').replace(/\/+$/, '').toLowerCase() || '/';
+  return PATH_TO_SCREEN[clean] || null;
+}
 
 const MONTHS_LOWER = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
@@ -221,9 +248,39 @@ function formatTime(d = new Date()) {
 export function AuditPortalProvider({ children }) {
   const { currentUser } = useAuth();
   const toast = useToast();
-  const [activeScreen, setActiveScreen] = useState(() => {
-    return localStorage.getItem(ACTIVE_SCREEN_KEY) || 'DASHBOARD';
+  const [activeScreen, setActiveScreenState] = useState(() => {
+    const fromUrl = typeof window !== 'undefined' ? screenFromPathname(window.location.pathname) : null;
+    return fromUrl || localStorage.getItem(ACTIVE_SCREEN_KEY) || 'DASHBOARD';
   });
+
+  const setActiveScreen = (nextScreen) => {
+    setActiveScreenState(nextScreen);
+    if (typeof window !== 'undefined') {
+      const targetPath = SCREEN_TO_PATH[nextScreen] || '/dashboard';
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ screen: nextScreen }, '', targetPath);
+      }
+    }
+  };
+
+  // Keep browser URL synced on initial mount & support browser Back/Forward buttons
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const targetPath = SCREEN_TO_PATH[activeScreen] || '/dashboard';
+    if (window.location.pathname !== targetPath) {
+      window.history.replaceState({ screen: activeScreen }, '', targetPath);
+    }
+  }, [activeScreen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePopState = () => {
+      const matched = screenFromPathname(window.location.pathname);
+      if (matched) setActiveScreenState(matched);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [selectedAuditId, setSelectedAuditId] = useState(() => {
     return localStorage.getItem(SELECTED_AUDIT_KEY) || null;
   });
@@ -479,6 +536,14 @@ export function AuditPortalProvider({ children }) {
     setShowNewAuditModal(false);
     setActiveScreen('AUDIT_LIST');
     syncAuditToBackend(newAudit, true);
+    logAuditorActivity({
+      auditor: newAudit.auditor,
+      storeName: newAudit.storeName,
+      branchCode: newAudit.storeId,
+      auditAppId: newAudit.appId,
+      activity: 'New Audit',
+      session: newAudit.sessionRound
+    });
     toast.success(`Audit #${newId} created for ${newAudit.storeName}.`, 'New Audit Created');
     return newAudit;
   };
@@ -585,6 +650,14 @@ export function AuditPortalProvider({ children }) {
     };
     setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
     syncAuditToBackend(updatedAudit);
+    logAuditorActivity({
+      auditor: updatedAudit.auditor,
+      storeName: updatedAudit.storeName,
+      branchCode: updatedAudit.storeId,
+      auditAppId: updatedAudit.appId,
+      activity: 'Checklist Submitted',
+      session: updatedAudit.sessionRound
+    });
     toast.success('Check List submitted! Proceed to Outcome Sheet.', 'Check List Submitted');
   };
 
@@ -603,6 +676,14 @@ export function AuditPortalProvider({ children }) {
     };
     setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
     syncAuditToBackend(updatedAudit);
+    logAuditorActivity({
+      auditor: updatedAudit.auditor,
+      storeName: updatedAudit.storeName,
+      branchCode: updatedAudit.storeId,
+      auditAppId: updatedAudit.appId,
+      activity: 'Outcome Sheet Submitted',
+      session: updatedAudit.sessionRound
+    });
     toast.success(
       'Outcome Sheet saved. Review the checklist summary and submit your final recommendation to Admin.',
       'Outcome Sheet Saved'
@@ -624,6 +705,7 @@ export function AuditPortalProvider({ children }) {
     const updatedAudit = {
       ...target,
       backendCategory,
+      auditorRecommendation: label,
       statusCategory: localStatus,
       recommendationReason: (reason || '').trim(),
       finalized: true,
@@ -632,6 +714,14 @@ export function AuditPortalProvider({ children }) {
     };
     setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
     await syncAuditToBackend(updatedAudit);
+    logAuditorActivity({
+      auditor: updatedAudit.auditor,
+      storeName: updatedAudit.storeName,
+      branchCode: updatedAudit.storeId,
+      auditAppId: updatedAudit.appId,
+      activity: `Recommendation (${label})`,
+      session: updatedAudit.sessionRound
+    });
     toast.success(
       `Audit #${appId} finalized at ${completedTimeOut} and sent to HFA Admin as "${label}".`,
       'Audit Finished & Submitted'
