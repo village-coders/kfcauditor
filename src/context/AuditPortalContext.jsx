@@ -588,14 +588,17 @@ export function AuditPortalProvider({ children }) {
     toast.success('Check List submitted! Proceed to Outcome Sheet.', 'Check List Submitted');
   };
 
-  // Save Outcome Sheet (signatures & representation; auditor next chooses final recommendation)
+  // Save Outcome Sheet (signatures & representation; Time Out is recorded when auditor finishes via Recommend)
   const saveAuditOutcome = (appId, outcomePayload) => {
     const target = audits.find((a) => a.appId === appId);
     if (!target) return;
     const updatedAudit = {
       ...target,
+      storeRep: outcomePayload.storeRep || target.storeRep,
+      designation: outcomePayload.designation || target.designation,
+      auditor: outcomePayload.auditorName || target.auditor,
+      timeIn: outcomePayload.timeIn || target.timeIn,
       outcomeSubmitted: true,
-      timeOut: formatTime(),
       outcomeData: outcomePayload
     };
     setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
@@ -606,7 +609,7 @@ export function AuditPortalProvider({ children }) {
     );
   };
 
-  // Finalize Audit & Submit Auditor Recommendation to HFA Admin
+  // Finalize Audit & Submit Auditor Recommendation to HFA Admin (records exact Time Out)
   const submitFinalRecommendation = async (appId, { backendCategory, label, reason }) => {
     const target = audits.find((a) => a.appId === appId);
     if (!target) return false;
@@ -617,6 +620,7 @@ export function AuditPortalProvider({ children }) {
         ? 'OTHER_FAIL'
         : 'PENDING';
     const finalizedAt = new Date().toLocaleString();
+    const completedTimeOut = formatTime();
     const updatedAudit = {
       ...target,
       backendCategory,
@@ -624,12 +628,12 @@ export function AuditPortalProvider({ children }) {
       recommendationReason: (reason || '').trim(),
       finalized: true,
       finalizedAt,
-      timeOut: target.timeOut || formatTime()
+      timeOut: completedTimeOut
     };
     setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
     await syncAuditToBackend(updatedAudit);
     toast.success(
-      `Audit #${appId} finalized and sent to HFA Admin as "${label}".`,
+      `Audit #${appId} finalized at ${completedTimeOut} and sent to HFA Admin as "${label}".`,
       'Audit Finished & Submitted'
     );
     return true;

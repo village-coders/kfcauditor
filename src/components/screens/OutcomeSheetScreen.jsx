@@ -494,13 +494,67 @@ export function OutcomeSheetScreen({ mode = 'add' }) {
                     Submitted Outcome Sheet — Audit #{selectedAudit.appId}
                   </h3>
                   <p className="text-xs text-slate-600 mt-0.5">
-                    {selectedAudit.storeName} (#{selectedAudit.storeId}) &bull; Auditor:{' '}
-                    <strong>{selectedAudit.auditor}</strong>
+                    {selectedAudit.storeName} (#{selectedAudit.storeId})
                   </p>
                 </div>
                 <span className="text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-full">
                   Submitted: {selectedAudit.outcomeData.submittedAt || selectedAudit.date}
                 </span>
+              </div>
+
+              {/* Store & Audit Details Table */}
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+                <div className="bg-[#064e2b] text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider">
+                  Audit Details
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:gap-px bg-slate-100 text-xs sm:text-sm">
+                  {[
+                    { label: 'Branch Code', value: selectedAudit.storeId || '—', mono: true },
+                    { label: 'Store Address', value: selectedAudit.address || '—' },
+                    {
+                      label: 'Store Representative',
+                      value: selectedAudit.outcomeData?.storeRep || selectedAudit.storeRep || '—'
+                    },
+                    {
+                      label: 'Designation',
+                      value:
+                        selectedAudit.outcomeData?.designation || selectedAudit.designation || '—'
+                    },
+                    {
+                      label: 'Auditor',
+                      value: selectedAudit.outcomeData?.auditorName || selectedAudit.auditor || '—'
+                    },
+                    { label: 'Audit Date', value: selectedAudit.date || '—', mono: true },
+                    {
+                      label: 'Time In',
+                      value: selectedAudit.outcomeData?.timeIn || selectedAudit.timeIn || '—',
+                      mono: true
+                    },
+                    {
+                      label: 'Time Out',
+                      value: selectedAudit.finalized
+                        ? selectedAudit.timeOut || '—'
+                        : 'Pending recommendation',
+                      mono: selectedAudit.finalized,
+                      muted: !selectedAudit.finalized
+                    }
+                  ].map((item) => (
+                    <div key={item.label} className="bg-white p-3.5">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                        {item.label}
+                      </span>
+                      <span
+                        className={`font-semibold break-words ${
+                          item.muted
+                            ? 'text-amber-700 italic text-xs'
+                            : 'text-slate-900'
+                        } ${item.mono ? 'font-mono' : ''}`}
+                      >
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* NCR & RSR Signatures */}
