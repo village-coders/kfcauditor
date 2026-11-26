@@ -38,7 +38,7 @@ export async function getAssignedStores(username) {
     return {
       success: false,
       stores: [],
-      message: `No audit assigned to "${cleanUsername}" for today (${todayStr}).`
+      message: `No active audit window for "${cleanUsername}" on ${todayStr}. Login is only allowed between your assigned beginning and ending dates.`
     };
   } catch {
     return {
@@ -99,7 +99,7 @@ export async function loginAuditor({ username, store, password, rememberPassword
   if (availableStores.length === 0) {
     return {
       success: false,
-      message: `No audit is assigned to "${cleanUsername}" for today. Login is only permitted on the allocated audit date.`
+      message: `No audit is active for "${cleanUsername}" today. Login is only permitted between your assigned beginning and ending dates.`
     };
   }
 
