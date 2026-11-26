@@ -1,5 +1,22 @@
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api';
+function normalizeApiBaseUrl(raw) {
+  let base = String(raw || '').trim().replace(/\/+$/, '');
+  if (!base) return 'http://localhost:5050/api';
+
+  // If protocol is missing (e.g. "hfakfc-backend.onrender.com/api"), prepend https:// (or http:// for localhost)
+  if (!/^https?:\/\//i.test(base) && !base.startsWith('/')) {
+    const isLocal = /^(localhost|127\.0\.0\.1)(:|\/|$)/i.test(base);
+    base = `${isLocal ? 'http' : 'https'}://${base}`;
+  }
+
+  // Ensure /api suffix if caller passed only the host (e.g. "https://hfakfc-backend.onrender.com")
+  if (!/\/api$/i.test(base)) {
+    base = `${base}/api`;
+  }
+
+  return base;
+}
+
+export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 
 const SESSION_KEY = 'kfc_auditor_session';
 
@@ -36,4 +53,3 @@ export async function apiRequest(path, options = {}) {
   }
   return data;
 }
-

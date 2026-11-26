@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Store, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import InputField from '../common/InputField';
 import SelectField from '../common/SelectField';
@@ -62,17 +62,16 @@ export default function LoginForm() {
         setStoreStatusType('success');
         setStoreStatusMessage(`${result.stores.length} assigned store(s) ready`);
 
-        // Check if preselectedStore exists in returned stores
-        const matchingStore = preselectedStore 
-          ? result.stores.find((s) => s.shortName.toLowerCase() === preselectedStore.toLowerCase() || s.name.toLowerCase() === preselectedStore.toLowerCase())
+        const matchingStore = preselectedStore
+          ? result.stores.find(
+              (s) =>
+                s.shortName.toLowerCase() === preselectedStore.toLowerCase() ||
+                s.name.toLowerCase() === preselectedStore.toLowerCase()
+            )
           : null;
 
-        if (matchingStore) {
-          setSelectedStore(matchingStore.shortName);
-        } else {
-          // Default to the first assigned store
-          setSelectedStore(result.stores[0].shortName);
-        }
+        const chosen = matchingStore || result.stores[0];
+        setSelectedStore(chosen.shortName);
       } else {
         setAssignedStores([]);
         setSelectedStore('');
@@ -166,178 +165,195 @@ export default function LoginForm() {
 
   return (
     <>
-      <div className="w-full max-w-[390px] mx-auto bg-white rounded-md border border-gray-300 shadow-sm p-6 sm:p-7 relative transition-all">
-        {/* Top Logo - Halal Food Authority (Exact match to screenshot) */}
-        <div className="flex flex-col items-center justify-center pt-1 pb-4">
-          <img
-            src="/hfa-logo.png"
-            alt="Halal Food Authority - HFA Approved"
-            className="h-20 sm:h-22 w-auto object-contain select-none"
-            loading="eager"
-          />
-        </div>
+      <div className="w-full max-w-[420px] mx-auto bg-white rounded-2xl border border-slate-200/90 shadow-xl shadow-emerald-950/5 overflow-hidden relative transition-all">
+        {/* Top Emerald Accent Strip */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-[#064e2b] via-emerald-600 to-[#0b663a]" />
 
-        {/* Subtle Horizontal Divider */}
-        <div className="border-t border-gray-200/90 w-full mb-6" />
-
-        {/* Headings matching the screenshot */}
-        <div className="text-center mb-6 space-y-1">
-          <h1 className="text-xl sm:text-[22px] font-normal text-gray-700 tracking-tight">
-            Log in.
-          </h1>
-          <p className="text-sm sm:text-[15px] font-normal text-gray-600">
-            Enter LogIn Details.
-          </p>
-        </div>
-
-        {/* Global Error Banner if any */}
-        {generalError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start gap-2.5 text-xs text-red-700 animate-in fade-in">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
-            <span>{generalError}</span>
-          </div>
-        )}
-
-        {/* Login Form */}
-        <form onSubmit={handleFormSubmit} className="space-y-3.5">
-          {/* Field 1: Username */}
-          <div>
-            <InputField
-              id="auditor-username"
-              type="text"
-              value={username}
-              onChange={handleUsernameChange}
-              placeholder="Username"
-              required
-              autoComplete="username"
-              icon={<User className="w-4 h-4 text-gray-500" />}
-              error={errors.username}
-              rightElement={
-                isCheckingStores ? (
-                  <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />
-                ) : assignedStores.length > 0 ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                ) : null
-              }
+        <div className="p-6 sm:p-8">
+          {/* Top Logo - Halal Food Authority */}
+          <div className="flex flex-col items-center justify-center pb-5">
+            <img
+              src="/hfa-logo.png"
+              alt="Halal Food Authority - HFA Approved"
+              className="h-20 sm:h-22 w-auto object-contain select-none"
+              loading="eager"
             />
           </div>
 
-          {/* Field 2: Store (Automatically populated when username has assigned audit) */}
-          <div>
-            <SelectField
-              id="auditor-store"
-              value={selectedStore}
-              onChange={(e) => {
-                setSelectedStore(e.target.value);
-                if (errors.store) {
-                  setErrors((prev) => ({ ...prev, store: null }));
+          {/* Subtle Horizontal Divider */}
+          <div className="border-t border-slate-100 w-full mb-5" />
+
+          {/* Headings */}
+          <div className="text-center mb-6 space-y-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Auditor Sign In
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Enter your credentials to access today&apos;s assigned store audit
+            </p>
+          </div>
+
+          {/* Global Error Banner if any */}
+          {generalError && (
+            <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+              <span>{generalError}</span>
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleFormSubmit} className="space-y-4">
+            {/* Field 1: Username */}
+            <div>
+              <label htmlFor="auditor-username" className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Auditor Username
+              </label>
+              <InputField
+                id="auditor-username"
+                type="text"
+                value={username}
+                onChange={handleUsernameChange}
+                placeholder="Enter username"
+                required
+                autoComplete="username"
+                icon={<User className="w-4 h-4 text-slate-500" />}
+                error={errors.username}
+                rightElement={
+                  isCheckingStores ? (
+                    <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />
+                  ) : assignedStores.length > 0 ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : null
                 }
-              }}
-              options={assignedStores}
-              placeholder={
-                !username.trim()
-                  ? 'Input username to load stores'
-                  : assignedStores.length === 0
-                  ? 'No assigned stores'
-                  : 'Select assigned store'
-              }
-              required
-              disabled={isCheckingStores || assignedStores.length === 0}
-              isLoading={isCheckingStores}
-              icon={<Store className="w-4 h-4 text-gray-500" />}
-              error={errors.store}
-            />
-
-            {/* Helper status text for assigned audit stores */}
-            {storeStatusMessage && (
-              <div className="flex items-center gap-1.5 mt-1 px-1 text-[11px]">
-                {storeStatusType === 'success' ? (
-                  <span className="text-emerald-700 flex items-center gap-1 font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                    Assigned: {storeStatusMessage}
-                  </span>
-                ) : (
-                  <span className="text-amber-700 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                    {storeStatusMessage}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Field 3: Password */}
-          <div>
-            <InputField
-              id="auditor-password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (errors.password) {
-                  setErrors((prev) => ({ ...prev, password: null }));
-                }
-              }}
-              placeholder="•••••••"
-              required
-              autoComplete="current-password"
-              icon={<Lock className="w-4 h-4 text-gray-500" />}
-              error={errors.password}
-              rightElement={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="p-1 text-gray-400 hover:text-gray-700 focus:outline-none"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4 text-gray-500" />
-                  ) : (
-                    <Eye className="w-4 h-4 text-gray-400" />
-                  )}
-                </button>
-              }
-            />
-          </div>
-
-          {/* Row: Remember Password & Forget Password Link */}
-          <div className="flex items-center justify-between pt-1">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={rememberPassword}
-                onChange={(e) => setRememberPassword(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-400 text-[#006a19] focus:ring-emerald-500 cursor-pointer accent-[#006a19]"
               />
-              <span className="text-xs sm:text-[13px] font-bold text-[#003d0e] tracking-tight">
-                Remember Password
-              </span>
-            </label>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setShowForgotModal(true)}
-              className="text-xs sm:text-[13px] text-gray-600 hover:text-[#006a19] hover:underline font-normal transition-colors"
-            >
-              Forget password ?
-            </button>
-          </div>
+            {/* Field 2: Store (Automatically populated when username has assigned audit) */}
+            <div>
+              <label htmlFor="auditor-store" className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Assigned Store
+              </label>
+              <SelectField
+                id="auditor-store"
+                value={selectedStore}
+                onChange={(e) => {
+                  setSelectedStore(e.target.value);
+                  if (errors.store) {
+                    setErrors((prev) => ({ ...prev, store: null }));
+                  }
+                }}
+                options={assignedStores}
+                placeholder={
+                  !username.trim()
+                    ? 'Enter username to load stores'
+                    : assignedStores.length === 0
+                    ? 'No store assigned for today'
+                    : 'Select assigned store'
+                }
+                required
+                disabled={isCheckingStores || assignedStores.length === 0}
+                isLoading={isCheckingStores}
+                icon={<Store className="w-4 h-4 text-slate-500" />}
+                error={errors.store}
+              />
 
-          {/* Green Login Button (Exact style from screenshot) */}
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-24 sm:w-28 py-2 px-4 bg-[#006a19] hover:bg-[#005213] active:bg-[#00410f] text-white font-medium text-sm rounded transition-all duration-150 shadow-xs flex items-center justify-center disabled:opacity-75 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                'Login'
+              {/* Helper status text for assigned audit stores */}
+              {storeStatusMessage && (
+                <div className="flex items-center gap-1.5 mt-1.5 px-1 text-[11px]">
+                  {storeStatusType === 'success' ? (
+                    <span className="text-emerald-700 flex items-center gap-1.5 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+                      {storeStatusMessage}
+                    </span>
+                  ) : (
+                    <span className="text-amber-700 flex items-center gap-1.5 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                      {storeStatusMessage}
+                    </span>
+                  )}
+                </div>
               )}
-            </button>
-          </div>
-        </form>
+            </div>
+
+            {/* Field 3: Password */}
+            <div>
+              <label htmlFor="auditor-password" className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Password
+              </label>
+              <InputField
+                id="auditor-password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errors.password) {
+                    setErrors((prev) => ({ ...prev, password: null }));
+                  }
+                }}
+                placeholder="Enter your password"
+                required
+                autoComplete="current-password"
+                icon={<Lock className="w-4 h-4 text-slate-500" />}
+                error={errors.password}
+                rightElement={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="p-1.5 text-slate-400 hover:text-slate-700 focus:outline-none cursor-pointer rounded-lg"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4 text-slate-500" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-slate-400" />
+                    )}
+                  </button>
+                }
+              />
+            </div>
+
+            {/* Row: Remember Password & Forget Password Link */}
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberPassword}
+                  onChange={(e) => setRememberPassword(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-[#064e2b] focus:ring-emerald-500 cursor-pointer accent-[#064e2b]"
+                />
+                <span className="text-xs font-semibold text-slate-700">
+                  Remember me
+                </span>
+              </label>
+
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(true)}
+                className="text-xs text-[#064e2b] hover:text-emerald-800 hover:underline font-semibold transition-colors cursor-pointer"
+              >
+                Forgot password?
+              </button>
+            </div>
+
+            {/* Primary Login Button */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 px-4 bg-gradient-to-r from-[#064e2b] to-[#0b663a] hover:from-[#053e22] hover:to-[#08532f] active:scale-[0.99] text-white font-semibold text-sm rounded-xl transition-all duration-150 shadow-md shadow-emerald-950/15 flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  'Sign In to Portal'
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
       {/* Forgot Password Modal */}

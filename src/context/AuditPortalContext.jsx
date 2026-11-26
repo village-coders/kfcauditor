@@ -309,11 +309,26 @@ export function AuditPortalProvider({ children }) {
     [audits, currentUser?.currentStore]
   );
 
+  // An auditor can only add ONE audit for the logged-in store per allocated date / active session
+  const hasAddedAudit = useMemo(() => {
+    const todayStr = formatAuditDate();
+    return storeAudits.some(
+      (a) =>
+        String(a.date || '').toLowerCase() === todayStr.toLowerCase() ||
+        !a.outcomeSubmitted
+    );
+  }, [storeAudits]);
+
   const selectedAudit =
     storeAudits.find((a) => a.appId === selectedAuditId) || storeAudits[0] || null;
 
   // Create New Audit (from Dashboard or Audit List modal)
   const createNewAudit = ({ franchiseeId, franchiseeName, storeId, storeName, address, storeRep, designation, auditType }) => {
+    if (hasAddedAudit) {
+      toast.warning('An audit has already been added for this store. You cannot add another one.', 'Audit Already Added');
+      setShowNewAuditModal(false);
+      return null;
+    }
     const newId = String(Math.floor(262940 + Math.random() * 9000));
     const newAudit = {
       appId: newId,
@@ -516,6 +531,7 @@ export function AuditPortalProvider({ children }) {
         setShowNewAuditModal,
         isLoadingAudits,
         isSyncing,
+        hasAddedAudit,
         audits: storeAudits,
         createNewAudit,
         updateAuditMetadata,

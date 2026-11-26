@@ -63,6 +63,32 @@ export default function NewAuditModal() {
             </div>
           )}
 
+          {/* Franchisee (First) */}
+          <div className="flex flex-col sm:flex-row sm:items-center rounded border border-gray-300 overflow-hidden">
+            <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-2.5 sm:w-44 border-b sm:border-b-0 sm:border-r border-gray-300 shrink-0">
+              Franchisee:
+            </span>
+            <input
+              type="text"
+              readOnly
+              value={currentUser?.currentStore?.franchiseeName || '—'}
+              className="w-full px-3 py-2 text-sm text-gray-700 bg-gray-50 outline-none"
+            />
+          </div>
+
+          {/* Store Name */}
+          <div className="flex flex-col sm:flex-row sm:items-center rounded border border-gray-300 overflow-hidden">
+            <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-2.5 sm:w-44 border-b sm:border-b-0 sm:border-r border-gray-300 shrink-0">
+              Store:
+            </span>
+            <input
+              type="text"
+              readOnly
+              value={currentUser?.currentStore?.shortName || '—'}
+              className="w-full px-3 py-2 text-sm text-gray-700 bg-gray-50 outline-none"
+            />
+          </div>
+
           {/* Store Address */}
           <div className="flex flex-col sm:flex-row sm:items-center rounded border border-gray-300 overflow-hidden">
             <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-3 py-2.5 sm:w-44 border-b sm:border-b-0 sm:border-r border-gray-300 shrink-0">

@@ -20,6 +20,7 @@ export default function AuditListScreen() {
   const {
     audits,
     isLoadingAudits,
+    hasAddedAudit,
     setActiveScreen,
     setSelectedAuditId,
     setShowNewAuditModal,
@@ -82,11 +83,13 @@ export default function AuditListScreen() {
         <button
           id="MAPC"
           type="button"
-          onClick={() => setShowNewAuditModal(true)}
-          className="px-4 py-2.5 bg-[#064e2b] hover:bg-[#053e22] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+          disabled={hasAddedAudit}
+          onClick={() => !hasAddedAudit && setShowNewAuditModal(true)}
+          title={hasAddedAudit ? 'An audit has already been added for this store' : 'Create a new audit'}
+          className="px-4 py-2.5 min-h-[44px] bg-[#064e2b] hover:bg-[#053e22] disabled:bg-slate-300 disabled:text-slate-600 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold rounded-xl shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>New Audit</span>
+          <span>{hasAddedAudit ? 'Audit Added' : 'New Audit'}</span>
         </button>
       </div>
 
@@ -130,8 +133,8 @@ export default function AuditListScreen() {
           >
             <div className="bg-gradient-to-r from-[#064e2b] to-[#0b663a] text-white px-4 py-3 flex items-center justify-between text-xs">
               <div className="font-bold truncate">
-                {audit.storeName} &bull;{' '}
-                <span className="text-emerald-200 font-medium">{audit.franchiseeName}</span>
+                <span className="text-emerald-200 font-medium">{audit.franchiseeName || 'Franchisee'}</span>{' '}
+                &bull; {audit.storeName}
               </div>
               <span className="bg-white/15 px-2.5 py-0.5 rounded-full font-mono text-[11px] shrink-0">
                 {audit.date}
@@ -194,64 +197,66 @@ export default function AuditListScreen() {
                 </div>
               </div>
 
-              {/* Mobile Action Buttons */}
-              <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
+              {/* Mobile Action Buttons — Large ≥44px touch targets */}
+              <div className="pt-2.5 border-t border-slate-100 grid grid-cols-1 gap-2">
                 <button
                   type="button"
                   onClick={() => handleActionSelect(audit.appId, 'PRODUCTS')}
-                  className="px-3 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
                 >
-                  <Package className="w-3.5 h-3.5" />
-                  <span>Products</span>
+                  <Package className="w-4 h-4 text-emerald-300" />
+                  <span>{audit.productsSubmitted ? 'Add / View Product(s)' : 'Add Product'}</span>
                 </button>
 
-                <button
-                  type="button"
-                  disabled={!audit.productsSubmitted || audit.checklistSubmitted}
-                  onClick={() => handleActionSelect(audit.appId, 'ADD_CHECKLIST')}
-                  className="px-3 py-2.5 bg-[#064e2b] hover:bg-[#053e22] text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <ClipboardList className="w-3.5 h-3.5" />
-                  <span>Add Check List</span>
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={!audit.productsSubmitted || audit.checklistSubmitted}
+                    onClick={() => handleActionSelect(audit.appId, 'ADD_CHECKLIST')}
+                    className="min-h-[44px] px-3 py-2.5 bg-[#064e2b] hover:bg-[#053e22] active:scale-[0.99] text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <ClipboardList className="w-3.5 h-3.5" />
+                    <span>Add Check List</span>
+                  </button>
 
-                <button
-                  type="button"
-                  disabled={!audit.productsSubmitted && !audit.checklistSubmitted}
-                  onClick={() => handleActionSelect(audit.appId, 'VIEW_CHECKLIST')}
-                  className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>View Check List</span>
-                </button>
+                  <button
+                    type="button"
+                    disabled={!audit.productsSubmitted && !audit.checklistSubmitted}
+                    onClick={() => handleActionSelect(audit.appId, 'VIEW_CHECKLIST')}
+                    className="min-h-[44px] px-3 py-2.5 bg-slate-100 hover:bg-slate-200 active:scale-[0.99] text-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View Check List</span>
+                  </button>
 
-                <button
-                  type="button"
-                  disabled={!audit.checklistSubmitted}
-                  onClick={() => handleActionSelect(audit.appId, 'ADD_OUTCOME')}
-                  className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <FileSignature className="w-3.5 h-3.5" />
-                  <span>Outcome Sheet</span>
-                </button>
+                  <button
+                    type="button"
+                    disabled={!audit.checklistSubmitted}
+                    onClick={() => handleActionSelect(audit.appId, 'ADD_OUTCOME')}
+                    className="min-h-[44px] px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <FileSignature className="w-3.5 h-3.5" />
+                    <span>Outcome Sheet</span>
+                  </button>
 
-                <button
-                  type="button"
-                  disabled={!audit.checklistSubmitted}
-                  onClick={() => handleActionSelect(audit.appId, 'VIEW_OUTCOME')}
-                  className="px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <FileCheck className="w-3.5 h-3.5" />
-                  <span>View Outcome</span>
-                </button>
+                  <button
+                    type="button"
+                    disabled={!audit.checklistSubmitted}
+                    onClick={() => handleActionSelect(audit.appId, 'VIEW_OUTCOME')}
+                    className="min-h-[44px] px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <FileCheck className="w-3.5 h-3.5" />
+                    <span>View Outcome</span>
+                  </button>
+                </div>
 
                 <button
                   type="button"
                   onClick={() => setEditingAudit({ ...audit })}
-                  className="px-3 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full min-h-[42px] px-3 py-2 bg-white hover:bg-slate-50 active:scale-[0.99] text-slate-700 border border-slate-200 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit Audit</span>
+                  <span>Edit Audit Details</span>
                 </button>
               </div>
             </div>

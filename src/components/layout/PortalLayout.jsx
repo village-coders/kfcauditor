@@ -140,6 +140,12 @@ export default function PortalLayout({ children, pageTitle, bgStyle = 'bg-[#f4f7
             <span>Active Session</span>
           </div>
           <div className="text-slate-600 flex justify-between gap-2">
+            <span className="font-medium">Franchisee:</span>
+            <span className="text-[#064e2b] font-bold truncate">
+              {currentUser?.currentStore?.franchiseeName || '—'}
+            </span>
+          </div>
+          <div className="text-slate-600 flex justify-between gap-2">
             <span className="font-medium">Store:</span>
             <span className="text-[#064e2b] font-bold truncate">
               {currentUser?.currentStore?.shortName || '—'}
@@ -207,6 +213,10 @@ export default function PortalLayout({ children, pageTitle, bgStyle = 'bg-[#f4f7
         <footer className="hidden lg:block border-t border-slate-200/80 bg-white/80 px-6 py-3 text-xs text-slate-500">
           <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-4">
+              <span>
+                <strong className="text-slate-700">Franchisee:</strong>{' '}
+                {currentUser?.currentStore?.franchiseeName || '—'}
+              </span>
               <span>
                 <strong className="text-slate-700">Store:</strong>{' '}
                 {currentUser?.currentStore?.shortName || '—'}

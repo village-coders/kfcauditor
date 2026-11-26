@@ -16,15 +16,15 @@ export default function SelectField({
   return (
     <div className="w-full">
       <div
-        className={`relative flex items-stretch w-full rounded-md border bg-white overflow-hidden transition-all duration-150 ${
+        className={`relative flex items-stretch w-full rounded-xl border bg-white overflow-hidden transition-all duration-150 shadow-2xs ${
           error
-            ? 'border-red-400 ring-2 ring-red-100'
-            : 'border-gray-300 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-100'
-        } ${disabled ? 'bg-gray-50/80 text-gray-400 cursor-not-allowed' : ''}`}
+            ? 'border-rose-400 ring-2 ring-rose-100'
+            : 'border-slate-200 hover:border-slate-300 focus-within:border-[#064e2b] focus-within:ring-2 focus-within:ring-emerald-100'
+        } ${disabled ? 'bg-slate-50/90 text-slate-400 cursor-not-allowed' : ''}`}
       >
-        {/* Grey prefix block matching the screenshot */}
-        <div className="w-12 bg-gray-100/90 border-r border-gray-300/80 flex items-center justify-center shrink-0 text-gray-500">
-          {icon || <span className="w-4 h-4 rounded-sm bg-gray-200" />}
+        {/* Icon prefix block */}
+        <div className="w-11 bg-slate-50/90 border-r border-slate-200/80 flex items-center justify-center shrink-0 text-slate-400">
+          {icon || <span className="w-4 h-4 rounded-sm bg-slate-200" />}
         </div>
 
         {/* Native Select with custom arrow */}
@@ -35,8 +35,8 @@ export default function SelectField({
             onChange={onChange}
             required={required}
             disabled={disabled || isLoading}
-            className={`w-full px-3.5 py-2.5 text-base bg-transparent appearance-none outline-none focus:outline-none min-h-[44px] pr-9 ${
-              !value ? 'text-gray-400' : 'text-gray-800 font-medium'
+            className={`w-full px-3.5 py-2.5 text-sm sm:text-[15px] bg-transparent appearance-none outline-none focus:outline-none min-h-[46px] pr-9 ${
+              !value ? 'text-slate-400' : 'text-slate-800 font-medium'
             } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
           >
             <option value="" disabled>
