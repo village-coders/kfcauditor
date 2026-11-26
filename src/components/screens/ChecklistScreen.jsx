@@ -499,17 +499,19 @@ export function ChecklistScreen({ mode = 'add' }) {
 
                       {/* Desktop Structured Table */}
                       <div className="hidden lg:block overflow-x-auto rounded-xl border border-slate-200">
-                        <table className="w-full text-left border-collapse text-sm">
+                        <table className="w-full table-fixed text-left border-collapse text-sm">
                           <thead>
                             <tr className="bg-[#064e2b] text-white text-xs uppercase tracking-wider">
-                              <th className="py-3 px-3.5 border-r border-white/15 w-48">
+                              <th className="py-3 px-3.5 border-r border-white/15 w-[15%]">
                                 Audit Point ({pt.code})
                               </th>
-                              <th className="py-3 px-3.5 border-r border-white/15">Checks</th>
-                              <th className="py-3 px-3.5 border-r border-white/15 w-72">
+                              <th className="py-3 px-3.5 border-r border-white/15 w-[44%]">
+                                Checks
+                              </th>
+                              <th className="py-3 px-3 border-r border-white/15 w-[19%]">
                                 Scoring Criteria
                               </th>
-                              <th className="py-3 px-3.5 w-64">Score / Comments</th>
+                              <th className="py-3 px-3.5 w-[22%]">Score / Comments</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -531,12 +533,12 @@ export function ChecklistScreen({ mode = 'add' }) {
                                 </ul>
                               </td>
 
-                              <td className="p-3.5 border-r border-slate-200 bg-slate-50/60">
-                                <ul className="space-y-1.5">
+                              <td className="p-3 border-r border-slate-200 bg-slate-50/60">
+                                <ul className="space-y-1">
                                   {pt.scoring.map((sc, idx) => (
                                     <li
                                       key={idx}
-                                      className="text-xs leading-relaxed text-slate-700 pb-1.5 border-b border-slate-200 last:border-b-0 last:pb-0"
+                                      className="text-[11px] leading-snug text-slate-700 pb-1 border-b border-slate-200 last:border-b-0 last:pb-0"
                                     >
                                       {sc}
                                     </li>
