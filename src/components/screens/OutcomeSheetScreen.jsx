@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   FileSignature,
   RotateCcw,
@@ -7,10 +7,18 @@ import {
   LayoutDashboard,
   Search,
   Edit3,
-  Loader2
+  Loader2,
+  ClipboardCheck,
+  ShieldAlert,
+  AlertTriangle,
+  Eye,
+  X,
+  Send,
+  Award
 } from 'lucide-react';
 import { useAuditPortal } from '../../context/AuditPortalContext';
 import { useToast } from '../../context/ToastContext';
+import { CHECKLIST_STEPS, SCORING_MATRIX } from '../../data/kfcAuditData';
 
 /**
  * Reusable Touch & Mouse HTML5 Signature Pad matching #sketchpad and #Canvas1
@@ -141,6 +149,65 @@ function SignaturePad({ id, label, initialDataUrl, onChange }) {
   );
 }
 
+const RECOMMENDATION_OPTIONS = [
+  {
+    id: 'PASS',
+    label: 'Recommend for Pass',
+    shortLabel: 'Pass',
+    backendCategory: 'Recommend For Pass',
+    confirmText: 'Are you sure you want to recommend this audit for Pass?',
+    adminDest: 'Recommend For Pass',
+    btnClass: 'bg-[#064e2b] hover:bg-[#053e22] text-white border-[#064e2b]',
+    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    modalAccent: 'bg-[#064e2b]',
+    icon: CheckCircle2
+  },
+  {
+    id: 'REVIEW',
+    label: 'Recommend for Review',
+    shortLabel: 'Review',
+    backendCategory: 'Review List',
+    confirmText: 'Are you sure you want to recommend this audit for Review?',
+    adminDest: 'Review List',
+    btnClass: 'bg-[#0c3b6e] hover:bg-[#092d54] text-white border-[#0c3b6e]',
+    badgeClass: 'bg-sky-100 text-sky-800 border-sky-300',
+    modalAccent: 'bg-[#0c3b6e]',
+    icon: Eye
+  },
+  {
+    id: 'OTHER_FAIL',
+    label: 'Recommend for Other Fail',
+    shortLabel: 'Other Fail',
+    backendCategory: 'Other Fail',
+    confirmText: 'Are you sure you want to recommend this audit for Other Fail?',
+    adminDest: 'Other Fail',
+    btnClass: 'bg-amber-600 hover:bg-amber-700 text-white border-amber-600',
+    badgeClass: 'bg-amber-100 text-amber-800 border-amber-300',
+    modalAccent: 'bg-amber-600',
+    icon: AlertTriangle
+  },
+  {
+    id: 'L3_FAIL',
+    label: 'Recommend for L3 Fail',
+    shortLabel: 'L3 Fail',
+    backendCategory: 'L3 Critical Fail',
+    confirmText: 'Are you sure you want to recommend this audit for L3 Fail?',
+    adminDest: 'L3 Critical Fail',
+    btnClass: 'bg-rose-700 hover:bg-rose-800 text-white border-rose-700',
+    badgeClass: 'bg-rose-100 text-rose-800 border-rose-300',
+    modalAccent: 'bg-rose-700',
+    icon: ShieldAlert
+  }
+];
+
+function getScorePillClass(val) {
+  if (val === 'Pass') return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+  if (val === 'L1') return 'bg-amber-100 text-amber-800 border-amber-300';
+  if (val === 'L2') return 'bg-orange-100 text-orange-800 border-orange-300';
+  if (val === 'L3') return 'bg-rose-100 text-rose-800 border-rose-300';
+  return 'bg-slate-100 text-slate-600 border-slate-200';
+}
+
 export function OutcomeSheetScreen({ mode = 'add' }) {
   const {
     selectedAudit,
@@ -148,11 +215,61 @@ export function OutcomeSheetScreen({ mode = 'add' }) {
     isSyncing,
     setSelectedAuditId,
     setActiveScreen,
-    saveAuditOutcome
+    saveAuditOutcome,
+    submitFinalRecommendation
   } = useAuditPortal();
   const toast = useToast();
 
   const [dateSearch, setDateSearch] = useState('');
+  const [recommendationReason, setRecommendationReason] = useState(
+    selectedAudit?.recommendationReason || ''
+  );
+  const [pendingRecommendation, setPendingRecommendation] = useState(null);
+
+  useEffect(() => {
+    setRecommendationReason(selectedAudit?.recommendationReason || '');
+    setPendingRecommendation(null);
+  }, [selectedAudit?.appId, selectedAudit?.recommendationReason]);
+
+  const checklistSummaryRows = useMemo(() => {
+    const scores = selectedAudit?.checklistScores || {};
+    const comments = selectedAudit?.checklistComments || {};
+    const rows = [];
+    CHECKLIST_STEPS.forEach((step) => {
+      step.points.forEach((pt) => {
+        const rawScore = scores[pt.scoreId] || 'Unscored';
+        const score = rawScore === 'Select Option' ? 'Unscored' : rawScore;
+        rows.push({
+          code: pt.code,
+          stepTitle: step.stepTitle,
+          auditPoint: pt.auditPoint,
+          score,
+          comment: comments[pt.commentId] || ''
+        });
+      });
+    });
+    return rows;
+  }, [selectedAudit?.checklistScores, selectedAudit?.checklistComments]);
+
+  const scoreCounts = useMemo(() => {
+    const counts = { Pass: 0, L1: 0, L2: 0, L3: 0 };
+    checklistSummaryRows.forEach((r) => {
+      if (counts[r.score] !== undefined) counts[r.score] += 1;
+    });
+    return counts;
+  }, [checklistSummaryRows]);
+
+  const handleConfirmRecommendation = async () => {
+    if (!selectedAudit || !pendingRecommendation) return;
+    const ok = await submitFinalRecommendation(selectedAudit.appId, {
+      backendCategory: pendingRecommendation.backendCategory,
+      label: pendingRecommendation.label,
+      reason: recommendationReason
+    });
+    if (ok) {
+      setPendingRecommendation(null);
+    }
+  };
 
   // Form states for Add Outcome Sheet (#AddUdit)
   const [storeRep, setStoreRep] = useState(selectedAudit?.storeRep || '');
@@ -367,18 +484,26 @@ export function OutcomeSheetScreen({ mode = 'add' }) {
             </table>
           </div>
 
-          {/* Selected Audit Outcome Summary Preview */}
+          {/* Selected Audit Outcome Summary + Checklist Summary + Scoring Matrix + Final Admin Recommendation */}
           {selectedAudit?.outcomeData && (
-            <div className="mx-4 mb-4 p-4 sm:p-5 rounded-2xl border border-emerald-200 bg-emerald-50/50 space-y-4">
+            <div className="mx-3.5 sm:mx-4 mb-4 p-4 sm:p-6 rounded-2xl border border-emerald-200 bg-emerald-50/40 space-y-5">
+              {/* Header */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200 pb-3">
-                <h3 className="text-sm sm:text-base font-bold text-[#064e2b]">
-                  Submitted Outcome Sheet — Audit #{selectedAudit.appId}
-                </h3>
-                <span className="text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-200 px-3 py-0.5 rounded-full">
-                  Submitted: {selectedAudit.outcomeData.submittedAt}
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-[#064e2b]">
+                    Submitted Outcome Sheet — Audit #{selectedAudit.appId}
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    {selectedAudit.storeName} (#{selectedAudit.storeId}) &bull; Auditor:{' '}
+                    <strong>{selectedAudit.auditor}</strong>
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-emerald-800 bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-full">
+                  Submitted: {selectedAudit.outcomeData.submittedAt || selectedAudit.date}
                 </span>
               </div>
 
+              {/* NCR & RSR Signatures */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
                 <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
                   <h4 className="font-bold text-[#064e2b] border-b border-slate-100 pb-1.5">
@@ -423,6 +548,293 @@ export function OutcomeSheetScreen({ mode = 'add' }) {
                       />
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* 1. Checklist Points Summary */}
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+                <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ClipboardCheck className="w-4 h-4 text-emerald-300 shrink-0" />
+                    <h4 className="text-xs sm:text-sm font-bold tracking-wide uppercase">
+                      Checklist Points Summary
+                    </h4>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+                      Pass: {scoreCounts.Pass}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-200 border border-amber-400/30">
+                      L1: {scoreCounts.L1}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-200 border border-orange-400/30">
+                      L2: {scoreCounts.L2}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-200 border border-rose-400/30">
+                      L3: {scoreCounts.L3}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Mobile Stacked Summary */}
+                <div className="md:hidden divide-y divide-slate-100">
+                  {checklistSummaryRows.map((row) => (
+                    <div key={row.code} className="p-3.5 space-y-1.5 text-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="font-mono font-bold text-[#064e2b] mr-1.5">
+                            {row.code}
+                          </span>
+                          <span className="font-semibold text-slate-900">{row.auditPoint}</span>
+                        </div>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${getScorePillClass(
+                            row.score
+                          )}`}
+                        >
+                          {row.score}
+                        </span>
+                      </div>
+                      {row.comment && (
+                        <p className="text-[11px] text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
+                          {row.comment}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table Summary */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500">
+                        <th className="py-2.5 px-3.5 w-20">Point</th>
+                        <th className="py-2.5 px-3.5">Audit Point</th>
+                        <th className="py-2.5 px-3.5 w-28 text-center">Score</th>
+                        <th className="py-2.5 px-3.5 w-72">Auditor Comments</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {checklistSummaryRows.map((row) => (
+                        <tr key={row.code} className="hover:bg-slate-50/70">
+                          <td className="py-2.5 px-3.5 font-mono font-bold text-[#064e2b]">
+                            {row.code}
+                          </td>
+                          <td className="py-2.5 px-3.5 font-medium text-slate-800">
+                            {row.auditPoint}
+                          </td>
+                          <td className="py-2.5 px-3.5 text-center">
+                            <span
+                              className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getScorePillClass(
+                                row.score
+                              )}`}
+                            >
+                              {row.score}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3.5 text-xs text-slate-600">
+                            {row.comment || <span className="text-slate-400 italic">—</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 2. Scoring Matrix Reference */}
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+                <div className="bg-[#04391f] text-white px-4 py-2.5 flex items-center justify-between">
+                  <h4 className="text-xs sm:text-sm font-bold tracking-wide uppercase">
+                    Scoring Matrix
+                  </h4>
+                  <span className="text-[11px] text-emerald-200 font-medium">
+                    Use as reference for your final recommendation
+                  </span>
+                </div>
+                <div className="p-3.5 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  {SCORING_MATRIX.map((item) => (
+                    <div
+                      key={item.level}
+                      className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-2.5"
+                    >
+                      <span
+                        className={`px-2 py-0.5 rounded-md font-bold text-[11px] shrink-0 border ${getScorePillClass(
+                          item.level
+                        )}`}
+                      >
+                        {item.level}
+                      </span>
+                      <span className="text-slate-700 leading-relaxed">{item.description}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Final Recommendation to HFA Admin (Finishes Audit) */}
+              <div className="bg-white rounded-xl border-2 border-emerald-200/90 overflow-hidden shadow-xs">
+                <div className="bg-gradient-to-r from-[#064e2b] to-[#0b663a] text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 text-emerald-200 shrink-0" />
+                    <h4 className="text-xs sm:text-sm font-bold tracking-wide uppercase">
+                      Final Recommendation to HFA Admin
+                    </h4>
+                  </div>
+                  {selectedAudit.finalized && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/15 text-emerald-100 text-[11px] font-bold">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Audit Finished
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-4 sm:p-5 space-y-4">
+                  {selectedAudit.finalized ? (
+                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2 text-xs sm:text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 font-bold text-[#064e2b]">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                          <span>
+                            Audit Completed &amp; Recommended as:{' '}
+                            <span className="underline">
+                              {selectedAudit.backendCategory || 'Recommend For Pass'}
+                            </span>
+                          </span>
+                        </div>
+                        {selectedAudit.finalizedAt && (
+                          <span className="text-[11px] text-emerald-700 font-medium">
+                            {selectedAudit.finalizedAt}
+                          </span>
+                        )}
+                      </div>
+                      {selectedAudit.recommendationReason && (
+                        <div className="pt-2 border-t border-emerald-200/70 text-slate-700">
+                          <strong className="text-slate-900">Auditor Reason:</strong>{' '}
+                          {selectedAudit.recommendationReason}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label
+                          htmlFor="recommendation-reason"
+                          className="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5"
+                        >
+                          Reason for Recommendation
+                        </label>
+                        <textarea
+                          id="recommendation-reason"
+                          rows={3}
+                          value={recommendationReason}
+                          onChange={(e) => setRecommendationReason(e.target.value)}
+                          placeholder="Write your reason or key findings supporting your recommendation to HFA Admin..."
+                          className="w-full p-3 text-xs sm:text-sm border border-slate-200 rounded-xl bg-slate-50/50 focus:bg-white focus:border-[#064e2b] focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
+                        />
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <p className="text-xs font-semibold text-slate-600">
+                          Select your final recommendation below to complete and submit this audit to HFA Admin:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                          {RECOMMENDATION_OPTIONS.map((opt) => {
+                            const Icon = opt.icon;
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                disabled={isSyncing}
+                                onClick={() => setPendingRecommendation(opt)}
+                                className={`min-h-[46px] px-4 py-2.5 rounded-full font-bold text-xs sm:text-sm border shadow-xs inline-flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer ${opt.btnClass}`}
+                              >
+                                <Icon className="w-4 h-4 shrink-0" />
+                                <span>{opt.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Confirmation Modal for Final Recommendation */}
+          {pendingRecommendation && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-xs">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden">
+                <div
+                  className={`${pendingRecommendation.modalAccent} text-white px-5 py-4 flex items-center justify-between`}
+                >
+                  <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
+                    <pendingRecommendation.icon className="w-5 h-5 shrink-0" />
+                    <span>Confirm Final Recommendation</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPendingRecommendation(null)}
+                    className="p-1 text-white/80 hover:text-white cursor-pointer"
+                    aria-label="Close modal"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="p-5 sm:p-6 space-y-4">
+                  <p className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+                    {pendingRecommendation.confirmText}
+                  </p>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    This will finish <strong>Audit #{selectedAudit?.appId}</strong> for{' '}
+                    <strong>{selectedAudit?.storeName}</strong> and route it directly to{' '}
+                    <strong>{pendingRecommendation.adminDest}</strong> in the HFA Admin Portal.
+                  </p>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500 font-semibold">Checklist Tally:</span>
+                      <span className="font-mono font-bold text-slate-800">
+                        Pass: {scoreCounts.Pass} | L1: {scoreCounts.L1} | L2: {scoreCounts.L2} | L3:{' '}
+                        {scoreCounts.L3}
+                      </span>
+                    </div>
+                    <div className="pt-1.5 border-t border-slate-200/70">
+                      <span className="text-slate-500 font-semibold block mb-0.5">Reason:</span>
+                      <p className="text-slate-800">
+                        {recommendationReason.trim() || (
+                          <span className="italic text-slate-400">No additional reason entered</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      disabled={isSyncing}
+                      onClick={() => setPendingRecommendation(null)}
+                      className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSyncing}
+                      onClick={handleConfirmRecommendation}
+                      className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold inline-flex items-center gap-1.5 shadow-sm disabled:opacity-70 cursor-pointer ${pendingRecommendation.btnClass}`}
+                    >
+                      {isSyncing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                      <span>{isSyncing ? 'Submitting...' : 'Yes, Confirm & Finish'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
