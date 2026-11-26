@@ -101,6 +101,12 @@ function PortalScreenRouter() {
 function AppContent() {
   const { currentUser } = useAuth();
 
+  React.useEffect(() => {
+    if (!currentUser && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.history.replaceState(null, '', '/login');
+    }
+  }, [currentUser]);
+
   if (currentUser) {
     return (
       <AuditPortalProvider>

@@ -146,6 +146,31 @@ const ACTIVE_SCREEN_KEY = 'kfc_hfa_active_screen_v1';
 const SELECTED_AUDIT_KEY = 'kfc_hfa_selected_audit_v1';
 const PROTOCOL_KEY = 'kfc_hfa_protocol_accepted';
 
+const SCREEN_TO_PATH = {
+  DASHBOARD: '/dashboard',
+  AUDIT_LIST: '/audit-list',
+  PRODUCTS: '/products',
+  ADD_CHECKLIST: '/add-checklist',
+  VIEW_CHECKLIST: '/checklist',
+  ADD_OUTCOME: '/add-outcome',
+  VIEW_OUTCOME: '/outcome-sheet',
+  PASSED_LIST: '/passed-list',
+  PENDING_LIST: '/pending-list',
+  OTHER_FAILED_LIST: '/other-failed',
+  L3_LIST: '/l3-list',
+  MAP: '/map'
+};
+
+const PATH_TO_SCREEN = Object.entries(SCREEN_TO_PATH).reduce((acc, [screen, path]) => {
+  acc[path] = screen;
+  return acc;
+}, {});
+
+function screenFromPathname(pathname) {
+  const clean = String(pathname || '/').replace(/\/+$/, '').toLowerCase() || '/';
+  return PATH_TO_SCREEN[clean] || null;
+}
+
 const MONTHS_LOWER = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 function parseLocalDay(dateStr) {
@@ -223,9 +248,39 @@ function formatTime(d = new Date()) {
 export function AuditPortalProvider({ children }) {
   const { currentUser } = useAuth();
   const toast = useToast();
-  const [activeScreen, setActiveScreen] = useState(() => {
-    return localStorage.getItem(ACTIVE_SCREEN_KEY) || 'DASHBOARD';
+  const [activeScreen, setActiveScreenState] = useState(() => {
+    const fromUrl = typeof window !== 'undefined' ? screenFromPathname(window.location.pathname) : null;
+    return fromUrl || localStorage.getItem(ACTIVE_SCREEN_KEY) || 'DASHBOARD';
   });
+
+  const setActiveScreen = (nextScreen) => {
+    setActiveScreenState(nextScreen);
+    if (typeof window !== 'undefined') {
+      const targetPath = SCREEN_TO_PATH[nextScreen] || '/dashboard';
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ screen: nextScreen }, '', targetPath);
+      }
+    }
+  };
+
+  // Keep browser URL synced on initial mount & support browser Back/Forward buttons
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const targetPath = SCREEN_TO_PATH[activeScreen] || '/dashboard';
+    if (window.location.pathname !== targetPath) {
+      window.history.replaceState({ screen: activeScreen }, '', targetPath);
+    }
+  }, [activeScreen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePopState = () => {
+      const matched = screenFromPathname(window.location.pathname);
+      if (matched) setActiveScreenState(matched);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [selectedAuditId, setSelectedAuditId] = useState(() => {
     return localStorage.getItem(SELECTED_AUDIT_KEY) || null;
   });
