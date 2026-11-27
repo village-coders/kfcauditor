@@ -11,6 +11,7 @@ export default function NewAuditModal() {
   const [designation, setDesignation] = useState('');
   const [auditType, setAuditType] = useState('...Select Option...');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (showNewAuditModal) {
@@ -19,13 +20,15 @@ export default function NewAuditModal() {
       setDesignation('');
       setAuditType('...Select Option...');
       setError('');
+      setIsSubmitting(false);
     }
   }, [showNewAuditModal, currentUser]);
 
   if (!showNewAuditModal) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!storeRep.trim()) {
       setError('Store Representative is required.');
       return;
@@ -39,12 +42,17 @@ export default function NewAuditModal() {
       return;
     }
 
-    createNewAudit({
-      address: address.trim(),
-      storeRep: storeRep.trim(),
-      designation: designation.trim(),
-      auditType
-    });
+    setIsSubmitting(true);
+    try {
+      await createNewAudit({
+        address: address.trim(),
+        storeRep: storeRep.trim(),
+        designation: designation.trim(),
+        auditType
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -169,9 +177,10 @@ export default function NewAuditModal() {
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-[#064e2b] hover:bg-[#053e22] transition-colors shadow-xs cursor-pointer"
+              disabled={isSubmitting}
+              className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-[#064e2b] hover:bg-[#053e22] disabled:opacity-60 transition-colors shadow-xs cursor-pointer"
             >
-              Submit
+              {isSubmitting ? 'Capturing GPS...' : 'Submit'}
             </button>
           </div>
         </form>

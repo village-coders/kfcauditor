@@ -3,7 +3,7 @@ import { evaluateChecklistOutcome } from '../data/kfcAuditData';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
 import { apiRequest } from '../services/apiClient';
-import { logAuditorActivity } from '../services/activityLogger';
+import { captureAccurateLocation, logAuditorActivity } from '../services/activityLogger';
 
 const AuditPortalContext = createContext(null);
 
@@ -67,6 +67,8 @@ function fromBackendAudit(doc) {
     date: doc.auditDate || formatAuditDate(),
     timeIn: doc.timeIn || '09:00:00',
     timeOut: doc.timeOut || '',
+    startLocation: doc.startLocation || null,
+    endLocation: doc.endLocation || null,
     productsSubmitted,
     checklistSubmitted,
     outcomeSubmitted,
@@ -106,6 +108,8 @@ function toBackendAuditPayload(audit) {
     auditDate: audit.date,
     timeIn: audit.timeIn,
     timeOut: audit.timeOut,
+    ...(audit.startLocation ? { startLocation: audit.startLocation } : {}),
+    ...(audit.endLocation ? { endLocation: audit.endLocation } : {}),
     session: audit.sessionRound || 'Round Two 2026',
     category: mapLocalCategoryToBackend(
       audit.statusCategory,
@@ -472,13 +476,16 @@ export function AuditPortalProvider({ children }) {
     pastAudits[0] ||
     null;
 
-  // Create New Audit (from Dashboard or Audit List modal)
-  const createNewAudit = ({ franchiseeId, franchiseeName, storeId, storeName, address, storeRep, designation, auditType }) => {
+  // Create New Audit (from Dashboard or Audit List modal) — captures exact Start Time & fresh GPS
+  const createNewAudit = async ({ franchiseeId, franchiseeName, storeId, storeName, address, storeRep, designation, auditType }) => {
     if (hasAddedAudit) {
       toast.warning('An audit has already been added for this assignment. You cannot add another one.', 'Audit Already Added');
       setShowNewAuditModal(false);
       return null;
     }
+    const startLocation = await captureAccurateLocation({ forceFresh: true, timeoutMs: 8000 });
+    const startedAt = new Date();
+    const startTimeStr = formatTime(startedAt);
     const newId = String(Math.floor(262940 + Math.random() * 9000));
     const newAudit = {
       appId: newId,
@@ -492,10 +499,12 @@ export function AuditPortalProvider({ children }) {
       designation: designation || 'Shift Runner',
       auditor: currentUser?.username || '',
       auditType: auditType === '...Select Option...' ? 'Existing Store' : auditType,
-      sessionRound: 'Round Three 2026',
-      date: formatAuditDate(),
-      timeIn: formatTime(),
+      sessionRound: currentUser?.currentStore?.session || 'Round Three 2026',
+      date: formatAuditDate(startedAt),
+      timeIn: startTimeStr,
       timeOut: '',
+      startLocation,
+      endLocation: null,
       productsSubmitted: false,
       checklistSubmitted: false,
       outcomeSubmitted: false,
@@ -542,9 +551,17 @@ export function AuditPortalProvider({ children }) {
       branchCode: newAudit.storeId,
       auditAppId: newAudit.appId,
       activity: 'New Audit',
+      eventType: 'start',
+      startTime: startTimeStr,
+      capturedLocation: startLocation,
       session: newAudit.sessionRound
     });
-    toast.success(`Audit #${newId} created for ${newAudit.storeName}.`, 'New Audit Created');
+    toast.success(
+      startLocation?.source === 'gps'
+        ? `Audit #${newId} started at ${startTimeStr} (${startLocation.address}).`
+        : `Audit #${newId} started at ${startTimeStr}. Enable GPS permission to capture exact location.`,
+      'New Audit Created'
+    );
     return newAudit;
   };
 
@@ -690,7 +707,7 @@ export function AuditPortalProvider({ children }) {
     );
   };
 
-  // Finalize Audit & Submit Auditor Recommendation to HFA Admin (records exact Time Out)
+  // Finalize Audit & Submit Auditor Recommendation to HFA Admin (records exact Time Out & End GPS)
   const submitFinalRecommendation = async (appId, { backendCategory, label, reason }) => {
     const target = audits.find((a) => a.appId === appId);
     if (!target) return false;
@@ -700,8 +717,10 @@ export function AuditPortalProvider({ children }) {
         : backendCategory === 'Other Fail'
         ? 'OTHER_FAIL'
         : 'PENDING';
-    const finalizedAt = new Date().toLocaleString();
-    const completedTimeOut = formatTime();
+    const endLocation = await captureAccurateLocation({ forceFresh: true, timeoutMs: 8000 });
+    const endedAt = new Date();
+    const finalizedAt = endedAt.toLocaleString();
+    const completedTimeOut = formatTime(endedAt);
     const updatedAudit = {
       ...target,
       backendCategory,
@@ -710,7 +729,8 @@ export function AuditPortalProvider({ children }) {
       recommendationReason: (reason || '').trim(),
       finalized: true,
       finalizedAt,
-      timeOut: completedTimeOut
+      timeOut: completedTimeOut,
+      endLocation
     };
     setAudits((prev) => prev.map((a) => (a.appId === appId ? updatedAudit : a)));
     await syncAuditToBackend(updatedAudit);
@@ -720,10 +740,15 @@ export function AuditPortalProvider({ children }) {
       branchCode: updatedAudit.storeId,
       auditAppId: updatedAudit.appId,
       activity: `Recommendation (${label})`,
+      eventType: 'end',
+      endTime: completedTimeOut,
+      capturedLocation: endLocation,
       session: updatedAudit.sessionRound
     });
     toast.success(
-      `Audit #${appId} finalized at ${completedTimeOut} and sent to HFA Admin as "${label}".`,
+      endLocation?.source === 'gps'
+        ? `Audit #${appId} finalized at ${completedTimeOut} (${endLocation.address}) and sent to HFA Admin as "${label}".`
+        : `Audit #${appId} finalized at ${completedTimeOut} and sent to HFA Admin as "${label}". (GPS permission unavailable)`,
       'Audit Finished & Submitted'
     );
     return true;

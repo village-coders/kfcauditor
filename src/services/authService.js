@@ -150,6 +150,7 @@ export async function loginAuditor({ username, store, password, rememberPassword
     storeName: selectedStore.shortName || selectedStore.name,
     branchCode: selectedStore.branchCode || selectedStore.code || '',
     activity: 'Auditor Login',
+    eventType: 'login',
     session: selectedStore.session || 'Round Three 2026'
   });
 
@@ -185,6 +186,7 @@ export function logoutAuditor() {
       storeName: session.currentStore?.shortName || session.currentStore?.name || 'KFC Store',
       branchCode: session.currentStore?.branchCode || session.currentStore?.code || '',
       activity: 'Auditor Logout',
+      eventType: 'logout',
       session: session.currentStore?.session || 'Round Three 2026'
     });
   }
